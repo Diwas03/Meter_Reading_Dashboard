@@ -9,11 +9,7 @@
 // ENTER YOUR SETTINGS HERE
 // ============================================================
 
-const char* WIFI_SSID = "M Room";
-const char* WIFI_PASSWORD = "Gedu@1234!#";
-
-const unsigned long THINGSPEAK_CHANNEL_ID = 3564243; // Replace with Channel ID
-const char* THINGSPEAK_WRITE_KEY = "GTBB10KYB2J2C2Y5";
+#include "legacy_thingspeak_config.h" // ignored local credentials; see example
 
 // ============================================================
 // ESP32 / MAX485 CONNECTIONS

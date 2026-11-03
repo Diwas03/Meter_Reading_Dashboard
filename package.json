@@ -1,0 +1,37 @@
+{
+  "name": "meter-reading-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "vitest run",
+    "test:db": "bash tests/database.sh",
+    "test:browser": "playwright test",
+    "test:edge": "deno check --config supabase/functions/deno.json supabase/functions/ingest/index.ts supabase/functions/provision/index.ts",
+    "check:assets": "node tests/check-assets.mjs",
+    "check:source": "node tests/check-source.mjs",
+    "format": "prettier --write src supabase/functions tests/*.ts tests/*.mjs *.ts *.json .github/workflows"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.80.0",
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^3.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "deno": "^2.5.6",
+    "prettier": "^3.6.2",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.0",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+firmware/meter_gateway/config.h
+supabase/.temp/
+supabase/.branches/
+*.log
+test-results/
+playwright-report/
+*.tsbuildinfo
+legacy_thingspeak_config.h
