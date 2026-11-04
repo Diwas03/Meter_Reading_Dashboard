@@ -24,3 +24,5 @@ jobs:
           path: .
       - uses: actions/deploy-pages@v4
         id: deployment
+      - name: Verify published HTTPS dashboard
+        run: python3 .github/scripts/verify-public-site.py "${{ steps.deployment.outputs.page_url }}"
