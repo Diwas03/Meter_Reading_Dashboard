@@ -2,7 +2,7 @@
 
 A private electricity-meter dashboard for Secure Elite 300 series meters, MAX485 and ESP32 DevKit V1. React + TypeScript + Vite + Recharts on GitHub Pages; Supabase PostgreSQL, Auth and Edge Functions. No MQTT, ThingSpeak, Grafana or paid service is required.
 
-**Deployment status:** Supabase database, Auth configuration, Edge Functions and scheduled retention are deployed and hosted-tested. Firmware compiles. The live dashboard is **https://diwas03.github.io/Meter_Reading_Dashboard/**, published from the clean static `gh-pages` branch. The deployed HTTPS page/assets and public Supabase configuration passed the release smoke check. Historical credentials must be rotated. See [first ESP32 upload](docs/first-reading.md). See [verification](docs/verification.md) for executed tests and blockers. The default dashboard is explicitly labelled **local demo** and never writes sample data to Supabase.
+**Deployment status:** Supabase database, Auth configuration, Edge Functions and scheduled retention are deployed and hosted-tested. Firmware compiles. The live dashboard is **https://diwas03.github.io/Meter_Reading_Dashboard/**, published from the clean static `gh-pages` branch. The deployed HTTPS page/assets and public Supabase configuration passed the release smoke check. Historical credentials must be rotated. See [first ESP32 upload](docs/first-reading.md). See [verification](docs/verification.md) for executed tests and blockers. The dashboard opens directly to sign-in and shows **only saved ESP32 telemetry**, with Asia/Thimphu dates and times by default. No demo mode or synthetic sample generator is bundled.
 
 **Hardware status:** only auxiliary-power Modbus responses containing zeros were verified by the owner. Nonzero register mapping, float word order and scaling are **not calibrated** against the meter display. Do not use this system for billing, protection or safety control.
 
@@ -23,7 +23,7 @@ npm run dev
 
 The Vite base is `/Meter_Reading_Dashboard/`, including locally. The app uses no path-based router, so refreshes and Auth redirects stay on the project root. A different repository name requires changing `base` in `vite.config.ts` and all corresponding Auth URLs.
 
-The demo uses deterministic samples anchored at **2026-11-03 06:00 UTC (12:00 BTT)**. Its time ranges and status clock are fixed to that point; it is never represented as real telemetry. Use “Connect your meters” to switch to live mode.
+Sign in to view your gateways and stored readings. An empty account/history stays empty; network errors never fall back to sample data. Test-only synthetic fixtures live under tests/ and are excluded from the web build. Custom-date inputs initialize to the actual current date/time.
 
 For live mode copy `.env.example` to ignored `.env.local` and supply:
 
@@ -60,7 +60,7 @@ For a full local Supabase stack with the CLI and Docker, run `npx supabase start
 
 ## Register a gateway and send the first reading
 
-1. Configure the frontend, choose “Connect your meters”, and sign in. Open **Devices & setup**.
+1. Configure the frontend and sign in. Open **Devices & setup**.
 2. Enter a gateway name and slave IDs, initially `1`. Register. Copy the **gateway UUID** and **one-time upload token**. Only its SHA-256 hash is stored in the database. The 256-bit random token cannot be retrieved later.
 3. Configure and flash the firmware below. A gateway is an ESP32; a meter identity is `(gateway UUID, Modbus slave ID)`. Different gateways may both use slave 1.
 4. A successful upload returns `{"ok":true,"inserted":1,"duplicates":0,"received_at":"…"}`. After 10 seconds, retrying the same sample returns a duplicate count. Requests within 10 seconds return 429 and must retry with the same IDs.
@@ -127,7 +127,7 @@ The workflow `.github/workflows/pages.yml` runs unit, PostgreSQL, Edge type chec
 
 1. Push the feature branch and review it. Merge only after your review, or use your own approved branch workflow. A workflow must exist on the default branch for GitHub's manual-dispatch UI to appear.
 2. Repository **Settings → Pages → Build and deployment → Source: GitHub Actions**. Ensure Actions is enabled. If using GitHub Free, a public repository is normally needed for free Pages; do not change repository visibility without reviewing what would become public.
-3. **Settings → Secrets and variables → Actions → Variables**, create `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. They are intentionally public, not administrative secrets. With neither supplied, the published app supports local demo only and explains the missing live configuration.
+3. **Settings → Secrets and variables → Actions → Variables**, create `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. They are intentionally public, not administrative secrets. With either missing, the app explains the missing configuration and cannot display readings.
 4. Run the workflow, inspect all jobs and the `github-pages` environment URL, then open that exact URL. Test sign-in, owner isolation, first ESP32 upload and reload under `/Meter_Reading_Dashboard/`. Do not treat a green build as proof that hosted ingestion or hardware works.
 
 Expected project URL is `https://diwas03.github.io/Meter_Reading_Dashboard/`; **this is not a verified deployed URL**. Pages hosts public application files even when application data requires login. This is a personal/noncommercial monitoring dashboard, not commercial SaaS or an e-commerce site. GitHub Pages prohibits using it primarily for commercial transactions/SaaS and discourages sensitive transactions. Published site limit 1 GB; soft bandwidth limit 100 GB/month; deployment timeout 10 minutes. Auth requests go directly over HTTPS to Supabase; Pages never receives database secrets. Review applicable restrictions before changing use.

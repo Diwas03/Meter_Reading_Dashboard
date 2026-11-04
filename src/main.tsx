@@ -31,12 +31,9 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase, configured, charts, exportRows } from "./api";
 import {
   chooseBucket,
+  localDateInput,
+  chartTimeLabel,
   prepareChartData,
-  demoCharts,
-  demoDevices,
-  demoMeters,
-  demoNow,
-  demoReading,
   groups,
   health,
   rangeDates,
@@ -55,15 +52,16 @@ const message = (e: unknown) =>
       ? String(e.message)
       : "Something went wrong. Please retry.";
 function App() {
-  const [demo, setDemo] = useState(true),
-    [session, setSession] = useState<Session | null>(null),
-    [devices, setDevices] = useState<Device[]>(demoDevices),
-    [meters, setMeters] = useState<Meter[]>(demoMeters),
-    [device, setDevice] = useState("demo-gateway"),
-    [meter, setMeter] = useState("demo-meter-1");
+  const [session, setSession] = useState<Session | null>(null),
+    [devices, setDevices] = useState<Device[]>([]),
+    [meters, setMeters] = useState<Meter[]>([]),
+    [device, setDevice] = useState(""),
+    [meter, setMeter] = useState("");
   const [range, setRange] = useState("1h"),
-    [from, setFrom] = useState("2026-11-02T12:00"),
-    [to, setTo] = useState("2026-11-03T12:00"),
+    [from, setFrom] = useState(() =>
+      localDateInput(Date.now() - 3600000, "Asia/Thimphu"),
+    ),
+    [to, setTo] = useState(() => localDateInput(Date.now(), "Asia/Thimphu")),
     [zone, setZone] = useState("Asia/Thimphu"),
     [threshold, setThreshold] = useState(
       () => Number(localStorage.getItem("offlineMinutes")) || 5,
@@ -82,7 +80,7 @@ function App() {
     [authBusy, setAuthBusy] = useState(false),
     [authError, setAuthError] = useState("");
   const request = useRef(0);
-  const now = demo ? demoNow : clock;
+  const now = clock;
   useEffect(() => {
     if (!supabase) return;
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -106,13 +104,6 @@ function App() {
     setLatest([]);
     setHistory([]);
     setError("");
-    if (demo) {
-      setDevices(demoDevices);
-      setMeters(demoMeters);
-      setDevice("demo-gateway");
-      setMeter("demo-meter-1");
-      return;
-    }
     setDevices([]);
     setMeters([]);
     if (!session) {
@@ -150,7 +141,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [demo, session, inventory]);
+  }, [session, inventory]);
   const selected = useMemo(
     () =>
       meters.filter(
@@ -167,36 +158,25 @@ function App() {
     setLatest([]);
     setHistory([]);
     setError("");
-    if (!ids || (!demo && !session)) return;
+    if (!ids || !session) return;
     setLoading(true);
     (async () => {
       try {
-        const dates = rangeDates(
-            range,
-            demo ? demoNow : Date.now(),
-            from,
-            to,
-            zone,
-          ),
+        const dates = rangeDates(range, Date.now(), from, to, zone),
           seconds = chooseBucket(
             Date.parse(dates.start),
             Date.parse(dates.end),
             selected.length,
           );
-        const [l, h] = demo
-          ? [
-              selected.map((m) => demoReading(m, demoNow - 60000)),
-              demoCharts(selected, dates.start, dates.end, seconds),
-            ]
-          : await Promise.all([
-              supabase!
-                .rpc("latest_readings", { p_meters: ids.split(",") })
-                .then(({ data, error }) => {
-                  if (error) throw error;
-                  return data as Reading[];
-                }),
-              charts(ids.split(","), dates.start, dates.end, seconds),
-            ]);
+        const [l, h] = await Promise.all([
+          supabase!
+            .rpc("latest_readings", { p_meters: ids.split(",") })
+            .then(({ data, error }) => {
+              if (error) throw error;
+              return data as Reading[];
+            }),
+          charts(ids.split(","), dates.start, dates.end, seconds),
+        ]);
         if (request.current === id) {
           setLatest(l);
           setHistory(h);
@@ -210,7 +190,7 @@ function App() {
     return () => {
       request.current++;
     };
-  }, [ids, demo, session, range, from, to, zone, tick]); // selections are represented by ids
+  }, [ids, session, range, from, to, zone, tick]); // selections are represented by ids
   const formatted = (time: string, short = false) =>
     new Intl.DateTimeFormat("en-GB", {
       timeZone: zone,
@@ -254,31 +234,17 @@ function App() {
       const dates = rangeDates(range, now, from, to, zone);
       if (Date.parse(dates.end) - Date.parse(dates.start) > 7 * 86400000)
         throw new Error("CSV supports up to seven days.");
-      let rows: Reading[];
-      if (demo) {
-        rows = [];
-        for (
-          let t = Date.parse(dates.start);
-          t < Date.parse(dates.end);
-          t += 60000
-        )
-          for (const m of selected) {
-            rows.push(demoReading(m, t));
-            if (rows.length > 10000)
-              throw new Error("Export exceeds 10,000 rows; shorten the range.");
-          }
-      } else
-        rows = await exportRows(
-          selected.map((m) => m.id),
-          dates.start,
-          dates.end,
-        );
+      const rows = await exportRows(
+        selected.map((m) => m.id),
+        dates.start,
+        dates.end,
+      );
       const url = URL.createObjectURL(
           new Blob([toCsv(rows)], { type: "text/csv;charset=utf-8" }),
         ),
         a = document.createElement("a");
       a.href = url;
-      a.download = `${demo ? "DEMO-" : ""}meter-readings-UTC.csv`;
+      a.download = "meter-readings-UTC.csv";
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
@@ -349,9 +315,7 @@ function App() {
               <HelpCircle size={19} />
             </button>
             <span className="avatar">
-              {demo
-                ? "D"
-                : (session?.user.email?.slice(0, 1).toUpperCase() ?? "U")}
+              {session?.user.email?.slice(0, 1).toUpperCase() ?? "U"}
             </span>
           </div>
         </header>
@@ -369,51 +333,33 @@ function App() {
               <button
                 className="button"
                 onClick={download}
-                disabled={
-                  !selected.length ||
-                  exporting ||
-                  loading ||
-                  (!demo && !session)
-                }
+                disabled={!selected.length || exporting || loading || !session}
               >
                 <ArrowDownToLine size={16} />
                 {exporting ? "Preparing…" : "Export CSV"}
               </button>
             </div>
           </div>
-          <div className={"mode-banner " + (demo ? "" : "live")}>
+          <div className="mode-banner live">
             <span className="mode-icon">
               <Activity size={18} />
             </span>
             <div>
-              <strong>
-                {demo
-                  ? "You’re exploring the local demo"
-                  : "Your private meter workspace"}
-              </strong>
+              <strong>Live ESP32 telemetry</strong>
               <span>
-                {demo
-                  ? "Deterministic sample data · 03 Nov 2026 · no production connection"
-                  : "Read-only telemetry · sign in to connect"}
+                {session
+                  ? "Your gateway uploads · Asia/Thimphu by default"
+                  : "Sign in to view your saved meter readings"}
               </span>
             </div>
-            <button
-              onClick={() => {
-                setDemo((d) => !d);
-                setAuthError("");
-              }}
-            >
-              {demo ? "Connect your meters" : "Explore demo"}
-              <ArrowUpRight size={16} />
-            </button>
-            {!demo && session && (
+            {session && (
               <button onClick={() => supabase!.auth.signOut()}>
                 <LogOut size={14} />
                 Log out
               </button>
             )}
           </div>
-          {!demo && !session ? (
+          {!session ? (
             <section className="login panel">
               <div className="section-kicker">CONNECT YOUR WORKSPACE</div>
               <h2>Welcome back.</h2>
@@ -657,7 +603,7 @@ function App() {
                   <span>
                     {current.clock_source === "server"
                       ? "Device clock unavailable · server timestamp used"
-                      : "Device clock supplied"}
+                      : `Measured ${formatted(current.measured_at ?? current.received_at)} ${zone}`}
                   </span>
                 </div>
               )}
@@ -676,8 +622,7 @@ function App() {
                   </p>
                 </div>
                 <span>
-                  <i className="tiny-dot" />{" "}
-                  {demo ? "SAMPLE TELEMETRY" : "METER TELEMETRY"}
+                  <i className="tiny-dot" /> ESP32 TELEMETRY
                 </span>
               </div>
               <section className="charts">
@@ -738,7 +683,9 @@ function App() {
                             />
                             <XAxis
                               dataKey="time"
-                              tickFormatter={(t) => formatted(t, true)}
+                              tickFormatter={(t) =>
+                                chartTimeLabel(t, zone, range)
+                              }
                               minTickGap={70}
                               tick={{ fontSize: 11, fill: "#8a938e" }}
                               axisLine={false}
@@ -860,7 +807,28 @@ function App() {
             <div>
               <label>
                 Display timezone{" "}
-                <select value={zone} onChange={(e) => setZone(e.target.value)}>
+                <select
+                  value={zone}
+                  onChange={(e) => {
+                    const nextZone = e.target.value;
+                    try {
+                      const dates = rangeDates(
+                        "custom",
+                        Date.now(),
+                        from,
+                        to,
+                        zone,
+                      );
+                      setFrom(
+                        localDateInput(Date.parse(dates.start), nextZone),
+                      );
+                      setTo(localDateInput(Date.parse(dates.end), nextZone));
+                    } catch {
+                      /* Keep partially edited inputs until valid. */
+                    }
+                    setZone(nextZone);
+                  }}
+                >
                   <option>Asia/Thimphu</option>
                   <option>UTC</option>
                 </select>
@@ -887,16 +855,15 @@ function App() {
             </div>
           </footer>
           <div className="calibration-note">
-            Hardware validation pending: auxiliary-power zero responses only.
+            ESP32 uploads are active. Measurement calibration is pending.
             Nonzero mapping, word order, and scaling must be checked against the
-            meter display. Raw telemetry is deleted after 30 days by default
-            when scheduled cleanup is enabled.
+            meter display. Raw telemetry is deleted after 30 days by default by
+            the active cleanup schedule.
           </div>
         </div>
       </main>
       {guide && (
         <Setup
-          demo={demo}
           devices={devices}
           close={() => setGuide(false)}
           refresh={() => {
@@ -909,12 +876,10 @@ function App() {
   );
 }
 function Setup({
-  demo,
   devices,
   close,
   refresh,
 }: {
-  demo: boolean;
   devices: Device[];
   close: () => void;
   refresh: () => void;
@@ -964,9 +929,9 @@ function Setup({
     setResult(null);
     setCopied(false);
     try {
-      if (demo || !supabase)
+      if (!supabase)
         throw new Error(
-          "Switch to your workspace and sign in to provision a real device. Demo mode never writes to Supabase.",
+          "Configure Supabase and sign in to register a gateway.",
         );
       if (!(await supabase.auth.getSession().then((r) => r.data.session)))
         throw new Error("Sign in first.");
@@ -1056,16 +1021,11 @@ function Setup({
             </label>
             <button
               className="button primary"
-              disabled={busy || demo}
+              disabled={busy}
               onClick={() => manage("register")}
             >
               {busy ? "Working…" : "Register gateway"}
             </button>
-            {demo && (
-              <small className="muted">
-                Provisioning is disabled in local demo mode.
-              </small>
-            )}
           </li>
           <li>
             <strong>Configure & flash</strong>
@@ -1100,21 +1060,21 @@ function Setup({
           <div className="actions">
             <button
               className="button"
-              disabled={busy || demo || !target}
+              disabled={busy || !target}
               onClick={() => manage("add_meters")}
             >
               Add slave IDs above
             </button>
             <button
               className="button"
-              disabled={busy || demo || !target}
+              disabled={busy || !target}
               onClick={() => manage("rotate")}
             >
               Rotate token
             </button>
             <button
               className="button danger"
-              disabled={busy || demo || !target}
+              disabled={busy || !target}
               onClick={() => manage("revoke")}
             >
               Revoke uploads

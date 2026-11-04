@@ -10,7 +10,7 @@ The dashboard is live at **https://diwas03.github.io/Meter_Reading_Dashboard/**,
 
 Open https://supabase.com/dashboard/project/qivwjkqkeipaivztgbyy/auth/users and use **Add user → Create new user**. Enter your own email and choose a strong password in Supabase, not in chat. If an “Auto Confirm User” option appears, enable it for your personally created account, or complete the email confirmation flow. This creates an app login; your Supabase website login is a separate account. Public app signup is disabled. No shared default password is provided.
 
-When the dashboard is live, click **Connect your meters** (it initially opens a clearly labelled local demo). Sign in with that email/password. Demo data never enters the production DB.
+Open the dashboard and sign in directly with that email/password. Only stored ESP32 readings are displayed. Dates and times default to Asia/Thimphu (BTT, UTC+06:00); UTC can be selected.
 
 ## 2. Register the gateway
 
@@ -71,7 +71,7 @@ Troubleshooting:
 | 401 | Gateway UUID/token mismatch, rotation or revocation; use the device token, not a Supabase key |
 | 403 | Slave ID not registered under this gateway |
 | 429 | Wait for retry/backoff; keep the same sample IDs |
-| Dashboard shows local demo | Choose Connect your meters, sign in and select your gateway |
+| Old sample screen still appears | Hard-refresh the browser, then sign in and select your gateway |
 | Supabase login fails | Create an application user under Authentication → Users; verify password and confirmation |
 
 Retries use the same sample IDs and are deduplicated. Buffering is bounded RAM (32 queued + up to 4 pending); overflow/reset can lose readings. Default scheduled retention permanently deletes raw readings after 30 days in bounded batches.

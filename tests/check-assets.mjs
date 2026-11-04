@@ -22,6 +22,7 @@ function walk(root) {
 }
 walk("dist");
 const patterns = [
+  /demo-gateway|demo-meter|Explore demo|Deterministic sample data|2026-11-03T06:00:00Z/,
   /sb_secret_[a-zA-Z0-9_-]{12,}/,
   /mg_[a-f0-9]{64}/,
   /postgres(?:ql)?:\/\/[^\s"']+:[^\s"']+@/,

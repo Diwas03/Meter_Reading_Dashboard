@@ -5,15 +5,8 @@ import {
   limitedJson,
   validateBatch,
 } from "../supabase/functions/_shared/validation";
-import {
-  chooseBucket,
-  demoMeters,
-  demoNow,
-  demoReading,
-  health,
-  rangeDates,
-  toCsv,
-} from "../src/model";
+import { chooseBucket, health, rangeDates, toCsv } from "../src/model";
+import { demoMeters, demoNow, demoReading } from "./fixtures";
 const device = "11111111-1111-4111-8111-111111111111",
   sample = "22222222-2222-4222-8222-222222222222";
 const payload = () => ({
@@ -201,9 +194,7 @@ describe("dashboard data semantics", () => {
 
 // The first live upload may be the only non-null point in a long date range.
 it("counts isolated zeros as real chart points while preserving missing buckets", async () => {
-  const { prepareChartData, demoReading, demoMeters, demoNow } = await import(
-    "../src/model"
-  );
+  const { prepareChartData } = await import("../src/model");
   const sample = demoReading(demoMeters[0], demoNow);
   sample.frequency = 0;
   const missing = {
@@ -216,4 +207,17 @@ it("counts isolated zeros as real chart points while preserving missing buckets"
   expect(result.counts[sample.meter_id + "_frequency"]).toBe(1);
   expect(result.points[0][sample.meter_id + "_frequency"]).toBeNull();
   expect(result.points[1][sample.meter_id + "_frequency"]).toBe(0);
+});
+
+it("formats calendar dates and times for actual BTT telemetry", async () => {
+  const { localDateInput, chartTimeLabel } = await import("../src/model");
+  const t = Date.parse("2026-11-04T08:00:00Z");
+  expect(localDateInput(t, "Asia/Thimphu")).toBe("2026-11-04T14:00");
+  expect(localDateInput(t, "UTC")).toBe("2026-11-04T08:00");
+  expect(
+    chartTimeLabel(new Date(t).toISOString(), "Asia/Thimphu", "24h"),
+  ).toContain("04 Nov");
+  expect(chartTimeLabel(new Date(t).toISOString(), "Asia/Thimphu", "1h")).toBe(
+    "14:00",
+  );
 });
