@@ -17,7 +17,7 @@
 | Firmware TLS | Public roots included with source/fingerprints in firmware-trust.md; hostname/chain/date verification remains enabled; SNTP is required. No insecure fallback |
 | Physical ESP32/meter | **Not tested here**. Owner's supplied ThingSpeak sketch matches pins/UART/registers/decoder. Nonzero mapping, scaling and word order still require comparison against the physical display |
 | GitHub public visibility | **Verified** with anonymous public API after owner's change. Connected account's earlier private metadata was stale |
-| GitHub Pages | Static-only publishing branch/workflow prepared for the original URL. Live deployment status must be checked before claiming a working dashboard link. Account connection lacks direct Pages/Actions-variables/repository-creation permissions (403); Git writes and workflow listing work |
+| GitHub Pages | **Deployed and HTTPS-verified** at https://diwas03.github.io/Meter_Reading_Dashboard/. [Run 41793190376](https://github.com/Diwas03/Meter_Reading_Dashboard/actions/runs/41793190376) succeeded; its Verify published HTTPS dashboard step executed and passed HTML, all referenced assets, live public Supabase configuration and build metadata checks. Owner enabled Pages; static branch is gh-pages. No main merge |
 
 No automatic main merge, remote DB reset, paid upgrade, secret logging or certificate-verification bypass was performed. Source branch and static publishing branch remain separate.
 

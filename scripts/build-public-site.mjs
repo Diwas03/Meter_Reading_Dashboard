@@ -29,6 +29,11 @@ rmSync(output, { recursive: true, force: true });
 mkdirSync(output, { recursive: true });
 cpSync("dist", output, { recursive: true });
 mkdirSync(output + "/.github/workflows", { recursive: true });
+mkdirSync(output + "/.github/scripts", { recursive: true });
+cpSync(
+  "scripts/verify-public-site.py",
+  output + "/.github/scripts/verify-public-site.py",
+);
 writeFileSync(output + "/.nojekyll", "");
 writeFileSync(
   output + "/.github/workflows/pages.yml",
@@ -53,13 +58,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
       - uses: actions/deploy-pages@v4
         id: deployment
+      - name: Verify published HTTPS dashboard
+        run: python3 .github/scripts/verify-public-site.py "\${{ steps.deployment.outputs.page_url }}"
 `,
 );
 const sha = execFileSync("git", ["rev-parse", "HEAD"], {
@@ -79,6 +84,6 @@ writeFileSync(
 );
 writeFileSync(
   output + "/README.md",
-  `# Current · meter dashboard\n\nPublic static dashboard build. Contains only the browser application, public Supabase URL/publishable key, build metadata and Pages deployment workflow. No private repository history, administrative keys, device credentials, firmware or database source is included.\n\nSet repository Settings → Pages → Source to GitHub Actions. The included workflow also attempts to enable Pages automatically. Run the workflow and verify its reported deployment URL.\n\nThe dashboard starts in clearly labelled local demo mode. Choose “Connect your meters” and sign in to view private telemetry. Create the dashboard user in the intended Supabase project's Authentication → Users screen before signing in.\n\nTo update, rebuild from the private source with npm run build:site and commit the fresh static output into this repository. Keep the private repository private.\n`,
+  `# Current · meter dashboard\n\nPublic static dashboard build. Contains only the browser application, public Supabase URL/publishable key, build metadata and Pages deployment workflow. No private repository history, administrative keys, device credentials, firmware or database source is included.\n\nSet repository Settings → Pages → Source to GitHub Actions. Enable Pages in repository settings before running the workflow. Run the workflow and verify its reported deployment URL.\n\nThe dashboard starts in clearly labelled local demo mode. Choose “Connect your meters” and sign in to view private telemetry. Create the dashboard user in the intended Supabase project's Authentication → Users screen before signing in.\n\nTo update, rebuild from the private source with npm run build:site and commit the fresh static output into this repository. Keep the private repository private.\n`,
 );
 console.log(`Static-only publish directory: ${output}`);

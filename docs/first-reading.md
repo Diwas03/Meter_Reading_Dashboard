@@ -4,7 +4,7 @@
 
 Supabase project `qivwjkqkeipaivztgbyy`: PostgreSQL schema/RLS, `provision` and `ingest` functions, Auth redirect configuration, and bounded 30-day raw retention are deployed. Hosted two-user isolation, token lifecycle, persisted zero/null readings, chart queries and export queries were tested using temporary fixtures, then removed. No real gateway or owner login was invented.
 
-The dashboard is being published from the clean static `gh-pages` branch of `Diwas03/Meter_Reading_Dashboard`, per the owner’s latest choice. Until deployment is verified, treat `https://diwas03.github.io/Meter_Reading_Dashboard/` as an expected destination, not a working link. The static publishing branch contains no private source, original Git history or administrative credentials. Other branches/history remain in the original repository; rotate previously committed credentials before making it public.
+The dashboard is live at **https://diwas03.github.io/Meter_Reading_Dashboard/**, published from the clean static `gh-pages` branch of the selected repository. Both the deployment and actual public HTTPS page/assets/configuration passed verification. Source changes remain on `feat/meter-monitoring`; main was not merged. The static publishing branch has no backend credentials or original Git history, but other public branches/history still exist—rotate historical ThingSpeak/Wi-Fi credentials.
 
 ## 1. Create your dashboard login
 
