@@ -132,6 +132,14 @@ The workflow `.github/workflows/pages.yml` runs unit, PostgreSQL, Edge type chec
 
 Expected project URL is `https://diwas03.github.io/Meter_Reading_Dashboard/`; **this is not a verified deployed URL**. Pages hosts public application files even when application data requires login. This is a personal/noncommercial monitoring dashboard, not commercial SaaS or an e-commerce site. GitHub Pages prohibits using it primarily for commercial transactions/SaaS and discourages sensitive transactions. Published site limit 1 GB; soft bandwidth limit 100 GB/month; deployment timeout 10 minutes. Auth requests go directly over HTTPS to Supabase; Pages never receives database secrets. Review applicable restrictions before changing use.
 
+## Individual graphs and received-data table
+
+**Overview** has one graph per supported parameter (16 total): all phase-to-neutral and phase-to-phase voltages, average voltage, R/Y/B/neutral currents, R/Y/B/average power factors, and frequency. Choose the gateway/meter and time range above the charts. Each graph plots only that parameter; selecting multiple meters compares the same parameter across those meters.
+
+Choose **Data table** to inspect individual stored samples. Use **Logged from** and **Logged through** to filter by server-received calendar date in the selected timezone (Asia/Thimphu by default). The entire end date is included. Rows are newest first, 50 per page, with all values, measured/logged timestamps, quality and per-field errors. Failed values display — while real zero remains 0.000.
+
+**Download CSV** exports the full selected date range for the selected meters, up to seven days and 10,000 rows. CSV timestamps remain UTC and failed fields are empty. Table queries support up to 90 days, subject to the raw-data retention policy. Pagination uses received time plus row ID so identical timestamps do not cause duplicate or skipped rows. The read-only table RPC is protected by the same ownership RLS as graphs.
+
 ## Tests and architecture
 
 ```sh

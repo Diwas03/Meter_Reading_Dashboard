@@ -34,41 +34,47 @@ export function prepareChartData(history: ChartRow[]) {
   }
   return { points: [...rows.values()], counts };
 }
-export const groups: {
+export const parameters: {
   title: string;
   unit: string;
   keys: Field[];
   labels: string[];
 }[] = [
+  { title: "R–N voltage", unit: "V", keys: ["voltage_rn"], labels: ["R–N"] },
+  { title: "Y–N voltage", unit: "V", keys: ["voltage_yn"], labels: ["Y–N"] },
+  { title: "B–N voltage", unit: "V", keys: ["voltage_bn"], labels: ["B–N"] },
   {
-    title: "Phase-to-neutral voltage",
+    title: "Average voltage",
     unit: "V",
-    keys: ["voltage_rn", "voltage_yn", "voltage_bn"],
-    labels: ["R–N", "Y–N", "B–N"],
+    keys: ["voltage_avg"],
+    labels: ["Average"],
   },
+  { title: "R–Y voltage", unit: "V", keys: ["voltage_ry"], labels: ["R–Y"] },
+  { title: "Y–B voltage", unit: "V", keys: ["voltage_yb"], labels: ["Y–B"] },
+  { title: "B–R voltage", unit: "V", keys: ["voltage_br"], labels: ["B–R"] },
+  { title: "R phase current", unit: "A", keys: ["current_r"], labels: ["R"] },
+  { title: "Y phase current", unit: "A", keys: ["current_y"], labels: ["Y"] },
+  { title: "B phase current", unit: "A", keys: ["current_b"], labels: ["B"] },
   {
-    title: "Phase-to-phase voltage",
-    unit: "V",
-    keys: ["voltage_ry", "voltage_yb", "voltage_br"],
-    labels: ["R–Y", "Y–B", "B–R"],
-  },
-  {
-    title: "Phase & neutral current",
+    title: "Neutral current",
     unit: "A",
-    keys: ["current_r", "current_y", "current_b", "current_n"],
-    labels: ["R", "Y", "B", "Neutral"],
+    keys: ["current_n"],
+    labels: ["Neutral"],
+  },
+  { title: "R phase power factor", unit: "PF", keys: ["pf_r"], labels: ["R"] },
+  { title: "Y phase power factor", unit: "PF", keys: ["pf_y"], labels: ["Y"] },
+  { title: "B phase power factor", unit: "PF", keys: ["pf_b"], labels: ["B"] },
+  {
+    title: "Average power factor",
+    unit: "PF",
+    keys: ["pf_avg"],
+    labels: ["Average"],
   },
   {
     title: "Frequency",
     unit: "Hz",
     keys: ["frequency"],
     labels: ["Frequency"],
-  },
-  {
-    title: "Power factor",
-    unit: "PF",
-    keys: ["pf_r", "pf_y", "pf_b", "pf_avg"],
-    labels: ["R", "Y", "B", "Average"],
   },
 ];
 export function health(
@@ -168,4 +174,27 @@ export function chartTimeLabel(time: string, zone: string, range: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(time));
+}
+
+// Logging dates include the entire selected end day in the chosen display zone.
+export function loggingDateRange(from: string, to: string, zone: string) {
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(from) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(to) ||
+    from > to
+  )
+    throw new Error("Choose a valid logging-date range.");
+  for (const day of [from, to])
+    if (new Date(day + "T00:00:00Z").toISOString().slice(0, 10) !== day)
+      throw new Error("Invalid calendar date.");
+  const exclusiveEnd = new Date(Date.parse(to + "T00:00:00Z") + 86400000)
+    .toISOString()
+    .slice(0, 10);
+  return rangeDates(
+    "custom",
+    Date.now(),
+    from + "T00:00",
+    exclusiveEnd + "T00:00",
+    zone,
+  );
 }

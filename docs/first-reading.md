@@ -76,6 +76,12 @@ Troubleshooting:
 
 Retries use the same sample IDs and are deduplicated. Buffering is bounded RAM (32 queued + up to 4 pending); overflow/reset can lose readings. Default scheduled retention permanently deletes raw readings after 30 days in bounded batches.
 
+## View and download logged data
+
+In the dashboard choose **Data table**, select your gateway/meter, then choose **Logged from** and **Logged through**. These are full logging days in the display timezone, initially Bhutan time. Use Next/Previous to move through 50 readings per page. Every sample includes logged time, device-measured time when available, validity/errors and all 16 measurements.
+
+Use **Download CSV** for the filtered rows (up to seven days / 10,000 records); its timestamps are UTC. Overview now shows a separate graph for each measurement, including average voltage and neutral current.
+
 ## 6. Add another meter
 
 Set the additional physical meter to a different Modbus slave address, for example **2**. In Devices & setup select the same gateway and add slave ID `2`. Change ignored `config.h` to `SLAVE_IDS[] = {1,2}` and upload again. Leave the gateway UUID/token unchanged. A second ESP32 is a new gateway and may independently use slave ID 1.

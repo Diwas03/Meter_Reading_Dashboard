@@ -34,7 +34,7 @@ import {
   localDateInput,
   chartTimeLabel,
   prepareChartData,
-  groups,
+  parameters,
   health,
   rangeDates,
   toCsv,
@@ -44,6 +44,7 @@ import {
   type Reading,
 } from "./model";
 import "./style.css";
+import DataTable from "./DataTable";
 const colors = ["#d1674c", "#c4a33d", "#4e85b4", "#8b7bac"];
 const message = (e: unknown) =>
   e instanceof Error
@@ -57,6 +58,7 @@ function App() {
     [meters, setMeters] = useState<Meter[]>([]),
     [device, setDevice] = useState(""),
     [meter, setMeter] = useState("");
+  const [view, setView] = useState<"overview" | "table">("overview");
   const [range, setRange] = useState("1h"),
     [from, setFrom] = useState(() =>
       localDateInput(Date.now() - 3600000, "Asia/Thimphu"),
@@ -158,7 +160,7 @@ function App() {
     setLatest([]);
     setHistory([]);
     setError("");
-    if (!ids || !session) return;
+    if (!ids || !session || view !== "overview") return;
     setLoading(true);
     (async () => {
       try {
@@ -190,7 +192,7 @@ function App() {
     return () => {
       request.current++;
     };
-  }, [ids, session, range, from, to, zone, tick]); // selections are represented by ids
+  }, [ids, session, range, from, to, zone, tick, view]); // selections are represented by ids
   const formatted = (time: string, short = false) =>
     new Intl.DateTimeFormat("en-GB", {
       timeZone: zone,
@@ -277,7 +279,10 @@ function App() {
           </div>
         </div>
         <div className="nav-label">WORKSPACE</div>
-        <button className="nav active">
+        <button
+          className={"nav " + (view === "overview" ? "active" : "")}
+          onClick={() => setView("overview")}
+        >
           <Gauge size={18} />
           Overview <span>01</span>
         </button>
@@ -300,7 +305,8 @@ function App() {
       <main>
         <header className="topbar">
           <span>
-            Workspace <ChevronRight size={13} /> <b>Overview</b>
+            Workspace <ChevronRight size={13} />{" "}
+            <b>{view === "overview" ? "Overview" : "Data table"}</b>
           </span>
           <div>
             <span className="timezone">
@@ -325,19 +331,23 @@ function App() {
             <div className="heading-row">
               <div>
                 <h1>
-                  Meter overview
+                  {view === "overview" ? "Meter overview" : "Logged meter data"}
                   <ArrowUpRight size={27} />
                 </h1>
                 <p>Understand your power. Stay connected to every phase.</p>
               </div>
-              <button
-                className="button"
-                onClick={download}
-                disabled={!selected.length || exporting || loading || !session}
-              >
-                <ArrowDownToLine size={16} />
-                {exporting ? "Preparing…" : "Export CSV"}
-              </button>
+              {view === "overview" && (
+                <button
+                  className="button"
+                  onClick={download}
+                  disabled={
+                    !selected.length || exporting || loading || !session
+                  }
+                >
+                  <ArrowDownToLine size={16} />
+                  {exporting ? "Preparing…" : "Export CSV"}
+                </button>
+              )}
             </div>
           </div>
           <div className="mode-banner live">
@@ -411,6 +421,30 @@ function App() {
             </section>
           ) : (
             <>
+              <div
+                className="view-tabs"
+                role="tablist"
+                aria-label="Meter views"
+              >
+                <button
+                  id="overview-tab"
+                  role="tab"
+                  aria-selected={view === "overview"}
+                  aria-controls="overview-panel"
+                  onClick={() => setView("overview")}
+                >
+                  Overview
+                </button>
+                <button
+                  id="data-tab"
+                  role="tab"
+                  aria-selected={view === "table"}
+                  aria-controls="data-panel"
+                  onClick={() => setView("table")}
+                >
+                  Data table
+                </button>
+              </div>
               <section className="filters panel">
                 <label>
                   <span>GATEWAY</span>
@@ -455,349 +489,383 @@ function App() {
                     <option value="all">All gateway meters</option>
                   </select>
                 </label>
-                <div className="range-switch" aria-label="Time range">
-                  {[
-                    ["1h", "1 hour"],
-                    ["24h", "24 hours"],
-                    ["7d", "7 days"],
-                    ["custom", "Custom"],
-                  ].map(([v, l]) => (
+                {view === "overview" && (
+                  <>
+                    {" "}
+                    <div className="range-switch" aria-label="Time range">
+                      {[
+                        ["1h", "1 hour"],
+                        ["24h", "24 hours"],
+                        ["7d", "7 days"],
+                        ["custom", "Custom"],
+                      ].map(([v, l]) => (
+                        <button
+                          className={range === v ? "selected" : ""}
+                          key={v}
+                          onClick={() => setRange(v)}
+                        >
+                          {l}
+                        </button>
+                      ))}
+                    </div>
                     <button
-                      className={range === v ? "selected" : ""}
-                      key={v}
-                      onClick={() => setRange(v)}
+                      className="icon-btn refresh"
+                      aria-label="Refresh readings"
+                      disabled={loading}
+                      onClick={() => setTick((t) => t + 1)}
                     >
-                      {l}
+                      <RefreshCw
+                        size={17}
+                        className={loading ? "spinning" : ""}
+                      />
                     </button>
-                  ))}
-                </div>
-                <button
-                  className="icon-btn refresh"
-                  aria-label="Refresh readings"
-                  disabled={loading}
-                  onClick={() => setTick((t) => t + 1)}
+                  </>
+                )}
+              </section>
+              {view === "overview" ? (
+                <div
+                  role="tabpanel"
+                  id="overview-panel"
+                  aria-labelledby="overview-tab"
                 >
-                  <RefreshCw size={17} className={loading ? "spinning" : ""} />
-                </button>
-              </section>
-              {range === "custom" && (
-                <div className="custom-range">
-                  <label>
-                    From ({zone})
-                    <input
-                      type="datetime-local"
-                      value={from}
-                      onChange={(e) => setFrom(e.target.value)}
-                    />
-                  </label>
-                  <label>
-                    To ({zone})
-                    <input
-                      type="datetime-local"
-                      value={to}
-                      onChange={(e) => setTo(e.target.value)}
-                    />
-                  </label>
-                  <span>Charts: up to 90 days · CSV: up to 7 days</span>
-                </div>
-              )}
-              <div className="reading-meta">
-                <div>
-                  <span className={"status " + status}>
-                    <i />
-                    {status}
-                  </span>
-                  <span>
-                    {current
-                      ? `Last received ${formatted(current.received_at)} · ${Math.max(0, Math.floor((now - Date.parse(current.received_at)) / 60000))} min ago`
-                      : "Awaiting first reading"}{" "}
-                    <b>{zone}</b>
-                  </span>
-                </div>
-                <span className="muted">
-                  60s refresh ·{" "}
-                  {meter === "all" ? "Cards show first meter" : "Latest sample"}
-                </span>
-              </div>
-              {error && (
-                <div role="alert" className="error">
-                  {error}{" "}
-                  <button onClick={() => setTick((t) => t + 1)}>Retry</button>
-                </div>
-              )}
-              {loading && (
-                <div className="loading" role="status">
-                  Fetching meter readings…
-                </div>
-              )}
-              {!loading && !error && !current && (
-                <div className="notice">
-                  {devices.length
-                    ? "No readings yet. Configure your ESP32 and send its first upload."
-                    : "No gateways registered. Open Devices & setup to register your first gateway."}
-                </div>
-              )}
-              <section className="stats">
-                {[
-                  {
-                    label: "Average voltage",
-                    key: "voltage_avg" as const,
-                    unit: "V",
-                    icon: <Zap size={18} />,
-                    note: "Phase-to-neutral",
-                  },
-                  {
-                    label: "R phase current",
-                    key: "current_r" as const,
-                    unit: "A",
-                    icon: <Activity size={18} />,
-                    note: "R phase · RMS",
-                  },
-                  {
-                    label: "Frequency",
-                    key: "frequency" as const,
-                    unit: "Hz",
-                    icon: <Radio size={18} />,
-                    note: "System frequency",
-                  },
-                  {
-                    label: "Average power factor",
-                    key: "pf_avg" as const,
-                    unit: "PF",
-                    icon: <Gauge size={18} />,
-                    note: "Reported by meter",
-                  },
-                ].map((c) => (
-                  <article className="stat panel" key={c.key}>
-                    <div className="stat-label">
-                      {c.label}
-                      <span>{c.icon}</span>
+                  {" "}
+                  {range === "custom" && (
+                    <div className="custom-range">
+                      <label>
+                        From ({zone})
+                        <input
+                          type="datetime-local"
+                          value={from}
+                          onChange={(e) => setFrom(e.target.value)}
+                        />
+                      </label>
+                      <label>
+                        To ({zone})
+                        <input
+                          type="datetime-local"
+                          value={to}
+                          onChange={(e) => setTo(e.target.value)}
+                        />
+                      </label>
+                      <span>Charts: up to 90 days · CSV: up to 7 days</span>
                     </div>
-                    <div className="stat-value">
-                      {loading
-                        ? "…"
-                        : current?.[c.key] === null ||
-                            current?.[c.key] === undefined
-                          ? "—"
-                          : current[c.key]!.toFixed(c.key === "pf_avg" ? 3 : 2)}
-                      <span>{c.unit}</span>
-                    </div>
-                    <div className="stat-note">
-                      {current?.[c.key] === null ? (
-                        <span className="warning">
-                          Unavailable · {current.errors[c.key]}
-                        </span>
-                      ) : (
-                        c.note
-                      )}
-                    </div>
-                  </article>
-                ))}
-              </section>
-              {current && (
-                <div className="quality">
-                  <ShieldCheck size={14} />
-                  {Object.keys(current.errors).length
-                    ? `Partial reading · ${Object.keys(current.errors).length} measurements unavailable. Valid values remain visible.`
-                    : "All 16 measurements received."}{" "}
-                  <span>
-                    {current.clock_source === "server"
-                      ? "Device clock unavailable · server timestamp used"
-                      : `Measured ${formatted(current.measured_at ?? current.received_at)} ${zone}`}
-                  </span>
-                </div>
-              )}
-              <div className="section-heading">
-                <div>
-                  <h2>Electrical trends</h2>
-                  <p>
-                    {range === "24h"
-                      ? "The last 24 hours"
-                      : range === "1h"
-                        ? "The last hour"
-                        : range === "7d"
-                          ? "The last 7 days"
-                          : "Your selected range"}{" "}
-                    · averages per time bucket · received time
-                  </p>
-                </div>
-                <span>
-                  <i className="tiny-dot" /> ESP32 TELEMETRY
-                </span>
-              </div>
-              <section className="charts">
-                {groups.map((g, index) => (
-                  <article
-                    className={
-                      "chart-panel panel " + (index === 0 ? "wide" : "")
-                    }
-                    key={g.title}
-                  >
-                    <div className="chart-header">
-                      <div>
-                        <h3>{g.title}</h3>
-                        <span>
-                          {g.unit === "PF"
-                            ? "Dimensionless"
-                            : g.unit === "Hz"
-                              ? "Hertz"
-                              : g.unit === "A"
-                                ? "Amperes"
-                                : "Volts"}{" "}
-                          · {zone}
-                        </span>
-                      </div>
-                      <span className="chart-unit">{g.unit}</span>
-                    </div>
-                    <div className="legend">
-                      {selected.flatMap((m) =>
-                        g.keys.map((k, i) => (
-                          <span key={m.id + k}>
-                            <i style={{ background: colors[i] }} />
-                            {selected.length > 1 ? `M${m.slave_id} · ` : ""}
-                            {g.labels[i]}
-                          </span>
-                        )),
-                      )}
-                    </div>
-                    <div className="chart-body">
-                      {selected.some((m) =>
-                        g.keys.some(
-                          (k) => (seriesCounts[m.id + "_" + k] ?? 0) > 0,
-                        ),
-                      ) ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart
-                            data={chartData}
-                            margin={{
-                              top: 12,
-                              right: 12,
-                              left: -22,
-                              bottom: 0,
-                            }}
-                          >
-                            <CartesianGrid
-                              strokeDasharray="3 5"
-                              vertical={false}
-                              stroke="#e6e9e6"
-                            />
-                            <XAxis
-                              dataKey="time"
-                              tickFormatter={(t) =>
-                                chartTimeLabel(t, zone, range)
-                              }
-                              minTickGap={70}
-                              tick={{ fontSize: 11, fill: "#8a938e" }}
-                              axisLine={false}
-                              tickLine={false}
-                            />
-                            <YAxis
-                              domain={["auto", "auto"]}
-                              tick={{ fontSize: 11, fill: "#8a938e" }}
-                              axisLine={false}
-                              tickLine={false}
-                              tickFormatter={(n) =>
-                                Number(n).toFixed(
-                                  g.unit === "PF" || g.unit === "Hz" ? 2 : 1,
-                                )
-                              }
-                            />
-                            <Tooltip
-                              labelFormatter={(t) =>
-                                `${formatted(String(t))} ${zone}`
-                              }
-                              formatter={(v) =>
-                                v == null ? "Unavailable" : Number(v).toFixed(3)
-                              }
-                              contentStyle={{
-                                borderRadius: 10,
-                                border: "1px solid #dce3dd",
-                                fontSize: 12,
-                              }}
-                            />
-                            {selected.flatMap((m, mi) =>
-                              g.keys.map((k, i) => (
-                                <Line
-                                  key={m.id + k}
-                                  name={`${selected.length > 1 ? "M" + m.slave_id + " · " : ""}${g.labels[i]} (${g.unit})`}
-                                  dataKey={m.id + "_" + k}
-                                  type="linear"
-                                  stroke={colors[i]}
-                                  strokeWidth={1.7}
-                                  dot={
-                                    (seriesCounts[m.id + "_" + k] ?? 0) <= 12
-                                      ? { r: 3, strokeWidth: 0 }
-                                      : false
-                                  }
-                                  connectNulls={false}
-                                  strokeDasharray={mi ? "5 3" : undefined}
-                                  isAnimationActive={false}
-                                />
-                              )),
-                            )}
-                          </LineChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="chart-empty">
-                          {loading
-                            ? "Loading history…"
-                            : "No valid measurements in this range"}
-                        </div>
-                      )}
-                    </div>
-                    <div className="chart-footer">
-                      Gaps indicate missing readings. Zero remains a measured
-                      value.
-                    </div>
-                  </article>
-                ))}
-              </section>
-              <section className="meter-health panel">
-                <div className="chart-header">
-                  <h3>Connected meters</h3>
-                  <Cpu size={17} />
-                </div>
-                {selected.map((m) => {
-                  const r = latest.find((x) => x.meter_id === m.id);
-                  return (
-                    <div className="meter-row" key={m.id}>
-                      <span className="meter-icon">
-                        <Cpu size={18} />
-                      </span>
-                      <div>
-                        <strong>
-                          Meter {String(m.slave_id).padStart(2, "0")}
-                        </strong>
-                        <small>
-                          {selectedDevice?.name} · Modbus slave {m.slave_id}
-                        </small>
-                      </div>
-                      <span
-                        className={
-                          "status " +
-                          health(
-                            r?.received_at,
-                            now,
-                            threshold,
-                            !!selectedDevice?.revoked_at,
-                          )
-                        }
-                      >
+                  )}
+                  <div className="reading-meta">
+                    <div>
+                      <span className={"status " + status}>
                         <i />
-                        {health(
-                          r?.received_at,
-                          now,
-                          threshold,
-                          !!selectedDevice?.revoked_at,
-                        )}
+                        {status}
                       </span>
-                      <span className="meter-time">
-                        {r ? formatted(r.received_at) : "No data"}
+                      <span>
+                        {current
+                          ? `Last received ${formatted(current.received_at)} · ${Math.max(0, Math.floor((now - Date.parse(current.received_at)) / 60000))} min ago`
+                          : "Awaiting first reading"}{" "}
+                        <b>{zone}</b>
                       </span>
                     </div>
-                  );
-                })}
-              </section>
+                    <span className="muted">
+                      60s refresh ·{" "}
+                      {meter === "all"
+                        ? "Cards show first meter"
+                        : "Latest sample"}
+                    </span>
+                  </div>
+                  {error && (
+                    <div role="alert" className="error">
+                      {error}{" "}
+                      <button onClick={() => setTick((t) => t + 1)}>
+                        Retry
+                      </button>
+                    </div>
+                  )}
+                  {loading && (
+                    <div className="loading" role="status">
+                      Fetching meter readings…
+                    </div>
+                  )}
+                  {!loading && !error && !current && (
+                    <div className="notice">
+                      {devices.length
+                        ? "No readings yet. Configure your ESP32 and send its first upload."
+                        : "No gateways registered. Open Devices & setup to register your first gateway."}
+                    </div>
+                  )}
+                  <section className="stats">
+                    {[
+                      {
+                        label: "Average voltage",
+                        key: "voltage_avg" as const,
+                        unit: "V",
+                        icon: <Zap size={18} />,
+                        note: "Phase-to-neutral",
+                      },
+                      {
+                        label: "R phase current",
+                        key: "current_r" as const,
+                        unit: "A",
+                        icon: <Activity size={18} />,
+                        note: "R phase · RMS",
+                      },
+                      {
+                        label: "Frequency",
+                        key: "frequency" as const,
+                        unit: "Hz",
+                        icon: <Radio size={18} />,
+                        note: "System frequency",
+                      },
+                      {
+                        label: "Average power factor",
+                        key: "pf_avg" as const,
+                        unit: "PF",
+                        icon: <Gauge size={18} />,
+                        note: "Reported by meter",
+                      },
+                    ].map((c) => (
+                      <article className="stat panel" key={c.key}>
+                        <div className="stat-label">
+                          {c.label}
+                          <span>{c.icon}</span>
+                        </div>
+                        <div className="stat-value">
+                          {loading
+                            ? "…"
+                            : current?.[c.key] === null ||
+                                current?.[c.key] === undefined
+                              ? "—"
+                              : current[c.key]!.toFixed(
+                                  c.key === "pf_avg" ? 3 : 2,
+                                )}
+                          <span>{c.unit}</span>
+                        </div>
+                        <div className="stat-note">
+                          {current?.[c.key] === null ? (
+                            <span className="warning">
+                              Unavailable · {current.errors[c.key]}
+                            </span>
+                          ) : (
+                            c.note
+                          )}
+                        </div>
+                      </article>
+                    ))}
+                  </section>
+                  {current && (
+                    <div className="quality">
+                      <ShieldCheck size={14} />
+                      {Object.keys(current.errors).length
+                        ? `Partial reading · ${Object.keys(current.errors).length} measurements unavailable. Valid values remain visible.`
+                        : "All 16 measurements received."}{" "}
+                      <span>
+                        {current.clock_source === "server"
+                          ? "Device clock unavailable · server timestamp used"
+                          : `Measured ${formatted(current.measured_at ?? current.received_at)} ${zone}`}
+                      </span>
+                    </div>
+                  )}
+                  <div className="section-heading">
+                    <div>
+                      <h2>Electrical trends</h2>
+                      <p>
+                        {range === "24h"
+                          ? "The last 24 hours"
+                          : range === "1h"
+                            ? "The last hour"
+                            : range === "7d"
+                              ? "The last 7 days"
+                              : "Your selected range"}{" "}
+                        · averages per time bucket · received time
+                      </p>
+                    </div>
+                    <span>
+                      <i className="tiny-dot" /> ESP32 TELEMETRY
+                    </span>
+                  </div>
+                  <section className="charts">
+                    {parameters.map((g, index) => (
+                      <article className={"chart-panel panel"} key={g.title}>
+                        <div className="chart-header">
+                          <div>
+                            <h3>{g.title}</h3>
+                            <span>
+                              {g.unit === "PF"
+                                ? "Dimensionless"
+                                : g.unit === "Hz"
+                                  ? "Hertz"
+                                  : g.unit === "A"
+                                    ? "Amperes"
+                                    : "Volts"}{" "}
+                              · {zone}
+                            </span>
+                          </div>
+                          <span className="chart-unit">{g.unit}</span>
+                        </div>
+                        <div className="legend">
+                          {selected.flatMap((m, mi) =>
+                            g.keys.map((k, i) => (
+                              <span key={m.id + k}>
+                                <i
+                                  style={{
+                                    background:
+                                      colors[(index + mi) % colors.length],
+                                  }}
+                                />
+                                {selected.length > 1 ? `M${m.slave_id} · ` : ""}
+                                {g.labels[i]}
+                              </span>
+                            )),
+                          )}
+                        </div>
+                        <div className="chart-body">
+                          {selected.some((m) =>
+                            g.keys.some(
+                              (k) => (seriesCounts[m.id + "_" + k] ?? 0) > 0,
+                            ),
+                          ) ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <LineChart
+                                data={chartData}
+                                margin={{
+                                  top: 12,
+                                  right: 12,
+                                  left: -22,
+                                  bottom: 0,
+                                }}
+                              >
+                                <CartesianGrid
+                                  strokeDasharray="3 5"
+                                  vertical={false}
+                                  stroke="#e6e9e6"
+                                />
+                                <XAxis
+                                  dataKey="time"
+                                  tickFormatter={(t) =>
+                                    chartTimeLabel(t, zone, range)
+                                  }
+                                  minTickGap={70}
+                                  tick={{ fontSize: 11, fill: "#8a938e" }}
+                                  axisLine={false}
+                                  tickLine={false}
+                                />
+                                <YAxis
+                                  domain={["auto", "auto"]}
+                                  tick={{ fontSize: 11, fill: "#8a938e" }}
+                                  axisLine={false}
+                                  tickLine={false}
+                                  tickFormatter={(n) =>
+                                    Number(n).toFixed(
+                                      g.unit === "PF" || g.unit === "Hz"
+                                        ? 2
+                                        : 1,
+                                    )
+                                  }
+                                />
+                                <Tooltip
+                                  labelFormatter={(t) =>
+                                    `${formatted(String(t))} ${zone}`
+                                  }
+                                  formatter={(v) =>
+                                    v == null
+                                      ? "Unavailable"
+                                      : Number(v).toFixed(3)
+                                  }
+                                  contentStyle={{
+                                    borderRadius: 10,
+                                    border: "1px solid #dce3dd",
+                                    fontSize: 12,
+                                  }}
+                                />
+                                {selected.flatMap((m, mi) =>
+                                  g.keys.map((k, i) => (
+                                    <Line
+                                      key={m.id + k}
+                                      name={`${selected.length > 1 ? "M" + m.slave_id + " · " : ""}${g.labels[i]} (${g.unit})`}
+                                      dataKey={m.id + "_" + k}
+                                      type="linear"
+                                      stroke={
+                                        colors[(index + mi) % colors.length]
+                                      }
+                                      strokeWidth={1.7}
+                                      dot={
+                                        (seriesCounts[m.id + "_" + k] ?? 0) <=
+                                        12
+                                          ? { r: 3, strokeWidth: 0 }
+                                          : false
+                                      }
+                                      connectNulls={false}
+                                      strokeDasharray={mi ? "5 3" : undefined}
+                                      isAnimationActive={false}
+                                    />
+                                  )),
+                                )}
+                              </LineChart>
+                            </ResponsiveContainer>
+                          ) : (
+                            <div className="chart-empty">
+                              {loading
+                                ? "Loading history…"
+                                : "No valid measurements in this range"}
+                            </div>
+                          )}
+                        </div>
+                        <div className="chart-footer">
+                          Gaps indicate missing readings. Zero remains a
+                          measured value.
+                        </div>
+                      </article>
+                    ))}
+                  </section>
+                  <section className="meter-health panel">
+                    <div className="chart-header">
+                      <h3>Connected meters</h3>
+                      <Cpu size={17} />
+                    </div>
+                    {selected.map((m) => {
+                      const r = latest.find((x) => x.meter_id === m.id);
+                      return (
+                        <div className="meter-row" key={m.id}>
+                          <span className="meter-icon">
+                            <Cpu size={18} />
+                          </span>
+                          <div>
+                            <strong>
+                              Meter {String(m.slave_id).padStart(2, "0")}
+                            </strong>
+                            <small>
+                              {selectedDevice?.name} · Modbus slave {m.slave_id}
+                            </small>
+                          </div>
+                          <span
+                            className={
+                              "status " +
+                              health(
+                                r?.received_at,
+                                now,
+                                threshold,
+                                !!selectedDevice?.revoked_at,
+                              )
+                            }
+                          >
+                            <i />
+                            {health(
+                              r?.received_at,
+                              now,
+                              threshold,
+                              !!selectedDevice?.revoked_at,
+                            )}
+                          </span>
+                          <span className="meter-time">
+                            {r ? formatted(r.received_at) : "No data"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </section>
+                </div>
+              ) : (
+                <div role="tabpanel" id="data-panel" aria-labelledby="data-tab">
+                  <DataTable meters={selected} zone={zone} tick={tick} />
+                </div>
+              )}
             </>
           )}
           <footer>

@@ -52,3 +52,32 @@ it("surfaces database/quota failures without substituting a zero or demo row", a
     "quota exceeded",
   );
 });
+
+it("returns a bounded table page and cursor at the last displayed row", async () => {
+  const records = Array.from({ length: 51 }, (_, i) => ({
+    id: 200 - i,
+    received_at: start,
+  }));
+  rpc.mockResolvedValue({ data: records, error: null });
+  const { readingPage } = await import("../src/api");
+  const page = await readingPage(["meter"], start, end, null);
+  expect(page.rows).toHaveLength(50);
+  expect(page.next).toEqual({ time: start, id: 151 });
+  expect(rpc.mock.calls[0][1]).toMatchObject({
+    p_before_time: null,
+    p_before_id: null,
+  });
+  await readingPage(["meter"], start, end, page.next);
+  expect(rpc.mock.calls[1][1]).toMatchObject({
+    p_before_time: start,
+    p_before_id: 151,
+  });
+});
+it("empty table pages remain empty", async () => {
+  rpc.mockResolvedValue({ data: [], error: null });
+  const { readingPage } = await import("../src/api");
+  expect(await readingPage(["meter"], start, end, null)).toEqual({
+    rows: [],
+    next: null,
+  });
+});

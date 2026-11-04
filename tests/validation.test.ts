@@ -221,3 +221,24 @@ it("formats calendar dates and times for actual BTT telemetry", async () => {
     "14:00",
   );
 });
+
+it("logging date filters include the entire selected BTT day and end exclusively", async () => {
+  const { loggingDateRange } = await import("../src/model");
+  expect(loggingDateRange("2026-11-04", "2026-11-04", "Asia/Thimphu")).toEqual({
+    start: "2026-11-03T18:00:00.000Z",
+    end: "2026-11-04T18:00:00.000Z",
+  });
+  expect(loggingDateRange("2026-11-04", "2026-11-04", "UTC")).toEqual({
+    start: "2026-11-04T00:00:00.000Z",
+    end: "2026-11-05T00:00:00.000Z",
+  });
+  expect(() => loggingDateRange("2026-11-05", "2026-11-04", "UTC")).toThrow();
+  expect(() => loggingDateRange("2026-02-30", "2026-03-01", "UTC")).toThrow();
+  expect(() => loggingDateRange("2026-01-01", "2026-11-04", "UTC")).toThrow();
+});
+
+it("every supported measurement has its own individual graph", async () => {
+  const { parameters, fields } = await import("../src/model");
+  expect(parameters.every((p) => p.keys.length === 1)).toBe(true);
+  expect(parameters.flatMap((p) => p.keys).sort()).toEqual([...fields].sort());
+});

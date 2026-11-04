@@ -55,3 +55,30 @@ export async function exportRows(
     afterId = last.id;
   }
 }
+
+export type TableCursor = { time: string; id: number };
+export async function readingPage(
+  ids: string[],
+  start: string,
+  end: string,
+  before: TableCursor | null,
+) {
+  const { data, error } = await supabase!.rpc("table_readings", {
+    p_meters: ids,
+    p_start: start,
+    p_end: end,
+    p_before_time: before?.time ?? null,
+    p_before_id: before?.id ?? null,
+  });
+  if (error) throw error;
+  const records = (data ?? []) as Reading[];
+  const rows = records.slice(0, 50),
+    last = rows.at(-1);
+  return {
+    rows,
+    next:
+      records.length > 50 && last
+        ? { time: last.received_at, id: last.id }
+        : null,
+  };
+}

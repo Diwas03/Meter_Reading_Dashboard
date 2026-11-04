@@ -19,6 +19,7 @@ async function fixture(
     single?: boolean;
     empty?: boolean;
     error?: boolean;
+    tablePages?: boolean;
   } = {},
 ) {
   const now = Math.floor(Date.now() / 60000) * 60000;
@@ -92,6 +93,26 @@ async function fixture(
         });
       } else
         data = chartRows(selected, body.p_start, body.p_end, body.p_seconds);
+    } else if (path === "/rest/v1/rpc/table_readings") {
+      if (options.error) {
+        await route.fulfill({
+          status: 503,
+          json: { message: "Table temporarily unavailable" },
+        });
+        return;
+      }
+      const selected = meters.filter((m) => body.p_meters.includes(m.id));
+      data = options.empty
+        ? []
+        : options.tablePages
+          ? Array.from({ length: body.p_before_id ? 1 : 51 }, (_, i) => ({
+              ...reading(selected[0], now),
+              id: body.p_before_id ? 1 : 200 - i,
+              frequency: 0,
+              current_r: null,
+              errors: { current_r: "timeout" },
+            }))
+          : selected.map((m) => reading(m, now));
     } else if (path === "/rest/v1/rpc/export_readings")
       data = options.empty
         ? []
@@ -116,9 +137,12 @@ test("starts with real login and displays only authenticated API telemetry", asy
     .fill("fixture@example.invalid");
   await page.getByLabel("Password", { exact: true }).fill("test-only-password");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page.locator(".chart-panel")).toHaveCount(5);
+  await expect(page.locator(".chart-panel")).toHaveCount(16);
   await expect(page.locator(".stat-value").first()).not.toContainText("…");
   await expect(page.getByText("Live ESP32 telemetry")).toBeVisible();
+  await expect(page.locator(".chart-panel .recharts-line")).toHaveCount(16);
+  for (const card of await page.locator(".chart-panel").all())
+    await expect(card.locator(".recharts-line")).toHaveCount(1);
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export CSV" }).click();
   const file = await download;
@@ -140,11 +164,24 @@ test("phone live account renders a single point including genuine zero", async (
   await fixture(page, { signedIn: true, single: true });
   await page.goto("./");
   await expect(
-    page.locator(".chart-panel").nth(3).locator(".recharts-line-dot"),
+    page
+      .locator(".chart-panel")
+      .filter({
+        has: page.getByRole("heading", { name: "Frequency", exact: true }),
+      })
+      .locator(".recharts-line-dot"),
   ).toHaveCount(1);
   await expect(
-    page.locator(".chart-panel").nth(2).locator(".recharts-line-dot"),
-  ).toHaveCount(4);
+    page
+      .locator(".chart-panel")
+      .filter({
+        has: page.getByRole("heading", {
+          name: "Neutral current",
+          exact: true,
+        }),
+      })
+      .locator(".recharts-line-dot"),
+  ).toHaveCount(1);
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(390);
@@ -158,7 +195,7 @@ test("empty account history does not manufacture samples", async ({ page }) => {
   await page.goto("./");
   await expect(
     page.getByText("No valid measurements in this range"),
-  ).toHaveCount(5);
+  ).toHaveCount(16);
   await expect(page.locator(".stat-value").first()).toContainText("—");
   await expect(page.locator(".recharts-line-dot")).toHaveCount(0);
 });
@@ -177,7 +214,7 @@ test("long chart ranges include calendar dates and current custom dates", async 
 }) => {
   await fixture(page, { signedIn: true });
   await page.goto("./");
-  await expect(page.locator(".chart-panel")).toHaveCount(5);
+  await expect(page.locator(".chart-panel")).toHaveCount(16);
   await page.getByRole("button", { name: "24 hours", exact: true }).click();
   await expect(page.locator(".chart-panel").first()).toContainText(
     /\d{2} [A-Z][a-z]{2}/,
@@ -195,4 +232,66 @@ test("long chart ranges include calendar dates and current custom dates", async 
     .nth(1)
     .inputValue();
   expect(Date.parse(utc + "Z")).toBe(originalInstant);
+});
+
+test("data table paginates, preserves zero/null and exports the logged-date selection", async ({
+  page,
+}) => {
+  await fixture(page, { signedIn: true, tablePages: true });
+  await page.goto("./");
+  const requests: Record<string, unknown>[] = [];
+  page.on("request", (r) => {
+    if (
+      r.url().includes("/rpc/table_readings") ||
+      r.url().includes("/rpc/export_readings")
+    )
+      requests.push(r.postDataJSON());
+  });
+  await page.getByRole("tab", { name: "Data table", exact: true }).click();
+  const table = page.getByRole("table");
+  await expect(table.locator("tbody tr")).toHaveCount(50);
+  await expect(table.locator("tbody tr").first()).toContainText("0.000");
+  await expect(table.locator("tbody tr").first()).toContainText("—");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(table.locator("tbody tr")).toHaveCount(1);
+  await expect(page.getByText("Page 2", { exact: false })).toBeVisible();
+  expect(requests.some((r) => r.p_before_id === 151)).toBe(true);
+  await page.getByRole("button", { name: "Previous", exact: true }).click();
+  await expect(table.locator("tbody tr")).toHaveCount(50);
+  await page.getByLabel("Logged from", { exact: true }).fill("2026-11-03");
+  await page.getByLabel("Logged through", { exact: true }).fill("2026-11-04");
+  await expect(table.locator("tbody tr")).toHaveCount(50);
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download CSV", exact: true }).click();
+  expect((await download).suggestedFilename()).toBe(
+    "meter-readings-2026-11-03-2026-11-04-UTC.csv",
+  );
+  expect(
+    requests.some(
+      (r) =>
+        r.p_start === "2026-11-02T18:00:00.000Z" &&
+        r.p_end === "2026-11-04T18:00:00.000Z",
+    ),
+  ).toBe(true);
+  await page.getByRole("tab", { name: "Overview", exact: true }).click();
+  await expect(page.locator(".chart-panel")).toHaveCount(16);
+});
+test("table displays empty logging range and disables oversized CSV", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await fixture(page, { signedIn: true, empty: true });
+  await page.goto("./");
+  await page.getByRole("tab", { name: "Data table", exact: true }).click();
+  await expect(
+    page.getByText("No readings logged in this date range."),
+  ).toBeVisible();
+  await page.getByLabel("Logged from", { exact: true }).fill("2026-11-01");
+  await page.getByLabel("Logged through", { exact: true }).fill("2026-11-09");
+  await expect(
+    page.getByRole("button", { name: "Download CSV", exact: true }),
+  ).toBeDisabled();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
 });

@@ -2,7 +2,7 @@
 
 | Check | Executed result |
 |---|---|
-| Unit and HTTP contract tests | **47 passed**: payload/schema/numeric/date/size validation, real zero/null/error semantics, provisioning authentication, token lifecycle responses, stale/offline states, timezone conversion, deterministic demo, CSV escaping/pagination/10k cap and quota errors |
+| Unit and HTTP contract tests | **51 passed**: payload/schema/numeric/date/size validation, real zero/null/error semantics, provisioning authentication, token lifecycle responses, stale/offline states, timezone conversion, deterministic demo, CSV escaping/pagination/10k cap and quota errors |
 | PostgreSQL 17 integration | **Passed** on initial implementation: migration application, RLS/grants, cross-owner explicit-UUID latest/chart/CSV access denial, browser/anonymous write denial, token authorization/rotation/revocation, deduplication, multi-gateway/meter separation, chart null buckets, CSV limits and 5,000+100 row retention batches |
 | Hosted Supabase migration | **Applied** to verified empty project `qivwjkqkeipaivztgbyy`, with migration tracking and all five app tables using RLS |
 | Hosted Edge Functions | **ACTIVE**, version 1, both functions. `verify_jwt=false` with explicit user/device verification inside each function |
@@ -12,7 +12,7 @@
 | Edge runtime type checking | **Both entrypoints passed Deno check**, isolated function dependency context/lockfile |
 | Frontend production build | **Passed** against the configured live project, both original path and alternate path build support. Static artifact includes only public browser configuration |
 | Built assets and source credential scans | **Passed** targeted patterns for administrative/device tokens, private keys and accidental Wi-Fi credentials. Original historical credentials remain in old commits and must be rotated; scans do not claim old history is clean |
-| Browser checks | **5 passed** in Chromium: desktop charts/time range/multi-meter selection/CSV download/setup, phone width and unconfigured-login state. Browser fixture server explicitly omits live configuration to keep local demo tests deterministic |
+| Browser checks | **7 passed** in Chromium: desktop charts/time range/multi-meter selection/CSV download/setup, phone width and unconfigured-login state. Browser fixture server explicitly omits live configuration to keep local demo tests deterministic |
 | Firmware | **Compiled** with Arduino CLI 1.3.1, esp32 3.3.0, ModbusMaster 2.0.1, ArduinoJson 7.4.2. Flash 1,070,727B (81%); globals 47,388B (14%). Upstream library/core warnings reported, including an unused ModbusMaster requestFrom path; actual sketch uses readHoldingRegisters |
 | Firmware TLS | Public roots included with source/fingerprints in firmware-trust.md; hostname/chain/date verification remains enabled; SNTP is required. No insecure fallback |
 | Physical ESP32/meter | **Not tested here**. Owner's supplied ThingSpeak sketch matches pins/UART/registers/decoder. Nonzero mapping, scaling and word order still require comparison against the physical display |
@@ -30,3 +30,7 @@ Real uploads were present and chart RPCs returned valid data. The 24h default co
 ## Live-only telemetry and timestamps
 
 Demo mode, sample selectors, sample CSV generation and fixed sample dates were removed from production source. Deterministic generators moved to tests/fixtures.ts only; built-asset checks reject their identifiers and UI strings. Browser tests use intercepted test-only Auth/API fixtures to validate login/logout, actual API-backed CSV, sparse points/zero, empty/error states, calendar-date axes and timezone-preserving custom filters. Production reads only authenticated Supabase queries. Read-only hosted verification found 24 persisted ESP32 samples (19 with device time, 5 using server fallback), one actual gateway and zero sample-named gateways; no existing readings were deleted or fabricated. Custom dates use the current time, longer chart axes include date/month, full tooltips and measured/received labels use the selected timezone.
+
+## Individual parameter charts and raw-data tab
+
+All 16 validated fields are represented exactly once in individual chart definitions; browser checks confirm each card has one parameter series for a selected meter. New Data table tests cover 50-row keyset paging, backward navigation, real zero/null distinction, inclusive BTT logging-date boundaries, CSV filename/filter propagation, empty states, phone width and the seven-day export bound. PostgreSQL integration additionally tests tied-timestamp paging, date filtering, anonymous denial, cross-owner denial and 90-day limits. The versioned table_readings migration was applied and recorded remotely; hosted read-only query returned 42 current-day owner readings at verification, and execute grants allow authenticated users while denying anon. No existing readings or ingestion settings were changed.

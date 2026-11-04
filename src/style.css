@@ -1303,3 +1303,156 @@ footer input {
 .heading h1 > svg {
   color: #a7b598;
 }
+
+.view-tabs {
+  display: flex;
+  gap: 5px;
+  margin: 0 0 17px;
+  border-bottom: 1px solid #dfe5da;
+  padding-bottom: 8px;
+}
+.view-tabs button {
+  border: 0;
+  background: transparent;
+  border-radius: 6px;
+  padding: 10px 17px;
+  font-size: 12px;
+  color: #829275;
+}
+.view-tabs button[aria-selected="true"] {
+  background: #e4edde;
+  color: #365b36;
+  font-weight: 600;
+}
+.data-panel {
+  margin-top: 20px;
+  padding: 23px;
+  min-width: 0;
+}
+.data-panel h2 {
+  font-size: 18px;
+  font-weight: 550;
+  margin: 0 0 7px;
+}
+.data-panel p {
+  font-size: 11px;
+  color: #829275;
+  line-height: 1.8;
+}
+.logging-filters {
+  display: flex;
+  gap: 18px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin: 24px 0 12px;
+}
+.logging-filters label {
+  display: grid;
+  gap: 7px;
+  font-size: 11px;
+  color: #667e59;
+}
+.logging-filters input {
+  border: 1px solid #dce3d4;
+  border-radius: 5px;
+  padding: 9px;
+  background: #fff;
+  color: #3e5637;
+}
+.table-help {
+  max-width: 900px;
+}
+.table-scroll {
+  max-width: 100%;
+  overflow: auto;
+  margin: 20px 0;
+  border: 1px solid #e5eadf;
+  border-radius: 6px;
+  max-height: 65vh;
+}
+.readings-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 11px;
+  width: 100%;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.readings-table caption {
+  text-align: left;
+  padding: 12px;
+  color: #7d9070;
+  font-size: 10px;
+}
+.readings-table th {
+  position: sticky;
+  top: 0;
+  background: #eef3e8;
+  text-align: left;
+  color: #4c6740;
+  font-weight: 550;
+  z-index: 1;
+}
+.readings-table td,
+.readings-table th {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e8eddf;
+}
+.readings-table tbody tr:nth-child(even) {
+  background: #f8faf5;
+}
+.readings-table tbody tr:hover {
+  background: #f0f5e8;
+}
+.readings-table td:first-child {
+  font-weight: 500;
+  color: #385032;
+}
+.readings-table details {
+  white-space: normal;
+  max-width: 240px;
+  overflow-wrap: anywhere;
+  margin-top: 5px;
+  font-size: 10px;
+  line-height: 1.8;
+}
+.readings-table summary {
+  cursor: pointer;
+  color: #7f926f;
+}
+.table-pagination {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  align-items: center;
+  font-size: 10px;
+  color: #86977a;
+  margin-top: 15px;
+}
+.table-pagination > div {
+  display: flex;
+  gap: 8px;
+}
+@media (max-width: 600px) {
+  .data-panel {
+    padding: 16px;
+  }
+  .logging-filters {
+    gap: 12px;
+  }
+  .logging-filters input {
+    max-width: 148px;
+    font-size: 12px;
+  }
+  .data-panel .chart-header {
+    align-items: flex-start;
+  }
+  .data-panel .chart-header .button {
+    font-size: 10px;
+    padding: 8px;
+  }
+  .table-pagination {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}

@@ -66,6 +66,28 @@ do $$ begin
  begin perform public.latest_readings('{}');raise exception 'FAIL anonymous RPC';exception when insufficient_privilege then null;end;
 end $$;
 reset role;
+-- Raw-table paging uses a stable descending (received_at,id) cursor, including tied timestamps.
+savepoint table_paging;
+insert into public.readings(sample_id,device_id,meter_id,received_at,clock_source,frequency)
+select gen_random_uuid(),m.device_id,m.id,now()-interval '5 minutes','server',0
+from public.meters m cross join generate_series(1,120) where m.device_id=:'a' and m.slave_id=1;
+set local role authenticated;
+select set_config('request.jwt.claim.sub','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',true);
+select pg_temp.assert((select count(*)=51 from public.table_readings(array(select id from public.meters),now()-interval '10 minutes',now(),null,null)),'raw-table page limit');
+select set_config('test.table_cursor',(select id::text from public.table_readings(array(select id from public.meters),now()-interval '10 minutes',now(),null,null) order by received_at desc,id desc offset 49 limit 1),true);
+select pg_temp.assert((select count(*)=51 and max(id)<current_setting('test.table_cursor')::bigint from public.table_readings(array(select id from public.meters),now()-interval '10 minutes',now(),now()-interval '5 minutes',current_setting('test.table_cursor')::bigint)),'raw-table cursor tie handling');
+select pg_temp.assert((select count(*)=0 from public.table_readings(array[current_setting('test.b_meter')::uuid],now()-interval '10 minutes',now(),null,null)),'raw-table cross-user isolation');
+select pg_temp.assert((select count(*)=0 from public.table_readings(array(select id from public.meters),now()-interval '4 minutes',now(),null,null)),'raw-table logging-time filter');
+do $$ begin
+ begin perform public.table_readings(array(select id from public.meters),now()-interval '91 days',now(),null,null);raise exception 'FAIL raw-table range';exception when others then if sqlerrm not like '%TABLE_LIMIT%' then raise;end if;end;
+end $$;
+reset role;
+set local role anon;
+do $$ begin
+ begin perform public.table_readings('{}',now()-interval '1 day',now(),null,null);raise exception 'FAIL raw-table anonymous';exception when insufficient_privilege then null;end;
+end $$;
+reset role;
+rollback to savepoint table_paging;
 -- Retention deletes old rows only, bounded to 5,000 per call.
 insert into public.readings(sample_id,device_id,meter_id,received_at,clock_source)
 select gen_random_uuid(),m.device_id,m.id,now()-interval '31 days','server' from public.meters m cross join generate_series(1,1700);
