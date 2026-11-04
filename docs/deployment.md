@@ -1,30 +1,31 @@
-# Target account configuration
+# Deployment state · 2026-11-04
 
-The owner supplied this new Supabase project URL:
+## Supabase: deployed and verified
 
 - Project reference: `qivwjkqkeipaivztgbyy`
 - Project URL: `https://qivwjkqkeipaivztgbyy.supabase.co`
-- Ingestion URL after deployment: `https://qivwjkqkeipaivztgbyy.supabase.co/functions/v1/ingest`
-- Provisioning URL after deployment: `https://qivwjkqkeipaivztgbyy.supabase.co/functions/v1/provision`
+- Ingest: `https://qivwjkqkeipaivztgbyy.supabase.co/functions/v1/ingest`
+- Provisioning: `https://qivwjkqkeipaivztgbyy.supabase.co/functions/v1/provision`
 
-These are configuration destinations, **not verified running endpoints**.
+The migration is applied with CLI-compatible migration tracking; all five app tables have RLS. Both functions are ACTIVE, version 1, with explicit custom authentication and `verify_jwt=false`. Hosted Auth, provisioning, ingestion, persistence, zero/null/error semantics, ownership isolation, credential rotation/revocation, retries, charts and CSV queries passed. Temporary verification accounts and cascading data were removed. No real owner account or gateway credential was fabricated.
 
-## Configuration still needed
+Public signup is disabled. Create your own app user at https://supabase.com/dashboard/project/qivwjkqkeipaivztgbyy/auth/users before signing in. Auth's site URL is `https://diwas03.github.io/Meter_Reading_Dashboard/`; local-development redirects are also retained. Scheduled 30-day retention is active (`meter-retention`, every ten minutes, at most 5,000 expired rows/run), and a successful Cron execution was observed. Do not reapply the initial migration or reset this project.
 
-1. Supabase project's **Settings → API Keys → Publishable key**: enter its `sb_publishable_…` key as `VITE_SUPABASE_PUBLISHABLE_KEY`. Set `VITE_SUPABASE_URL` to the URL above. Locally these go in ignored `.env.local`; for GitHub Pages they go in **repository Actions variables**. Modern publishable keys are intentionally public. Never use a service-role or `sb_secret_…` key in these fields.
-2. For this cloud session to deploy, securely add `SUPABASE_ACCESS_TOKEN` through environment settings. The saved credential requirement is scoped to `api.supabase.com`. GitHub–Supabase repository linking alone does not inject a management credential here. Do not put the token in GitHub Pages variables, code, chat or saved scripts. Alternatively run the README deployment commands from your own authenticated CLI.
-3. Review/save the draft network settings. The current runtime initially permitted package-manager/Git destinations only. Saved additions: `supabase.com`, `api.supabase.com`, the project host, `docs.github.com`, `api.github.com`, `downloads.arduino.cc`, `espressif.github.io`, `dl.espressif.com`. Saving a draft does not apply or publish it. Refresh the runtime configuration and retry before assuming access works.
-4. Apply the SQL migration, deploy both functions with explicit custom auth configuration, create an Auth user and set redirect URLs, enable retention Cron, and set GitHub Pages to Actions as described in README. Review migrations on the intended new project; don't reset or delete data from another project.
+## GitHub Pages publication
 
-Supabase CLI commands for this target:
+The owner chose the original repository, `Diwas03/Meter_Reading_Dashboard`, and made it public. Anonymous GitHub API verification confirms this even though connected account metadata was stale. Historical ThingSpeak credentials must be rotated; the original history is not rewritten automatically.
+
+Source changes remain on `feat/meter-monitoring`, with no automatic merge into main. A fresh **gh-pages** branch contains only the built dashboard, public Supabase URL/publishable key, public build metadata, README and a static Pages Actions workflow. It does not contain device credentials, administrative keys, firmware, database source or the original Git history. Other branches remain part of the same public repository.
 
 ```sh
-npx supabase login
-npx supabase link --project-ref qivwjkqkeipaivztgbyy
-npx supabase db push --dry-run
-npx supabase db push
-npx supabase functions deploy ingest --project-ref qivwjkqkeipaivztgbyy --no-verify-jwt
-npx supabase functions deploy provision --project-ref qivwjkqkeipaivztgbyy --no-verify-jwt
+# From the source checkout with the public frontend variables configured:
+npm ci
+npm run build:site
+# Generated static-only publishing files are in ignored .public-site/
 ```
 
-Use the secure CLI password prompt if needed. Never run `db reset` remotely. Remote account tests must verify RLS, Auth, uploads and retention on this actual project; passing disposable PostgreSQL tests is not remote deployment verification.
+The default publishing path is `/Meter_Reading_Dashboard/`, with workflow pushes on `gh-pages`. `PAGES_REPOSITORY` and `PAGES_SOURCE_BRANCH` can override those names when preparing a different target. The generated workflow uses Pages Actions and attempts automatic Pages enablement. No build secrets or repository variables are needed for this prebuilt static branch. The source workflow still supports rebuilding/deploying from main after review, with the two public Actions variables configured.
+
+The expected URL is **https://diwas03.github.io/Meter_Reading_Dashboard/**. Treat it as verified only after the deployment workflow and an actual HTTPS response have passed. If automatic Pages enablement fails, open https://github.com/Diwas03/Meter_Reading_Dashboard/settings/pages and select **Source: GitHub Actions**, then rerun the static branch workflow. The session's GitHub account connection cannot directly configure Pages or Actions variables (403), but normal Git pushes and workflow discovery are authorized.
+
+Follow [first-reading.md](first-reading.md) to create your own app login, register the ESP32 and upload its first real reading. Never use the account management token or administrative key on the device or frontend.

@@ -1,31 +1,24 @@
-# Verification and remaining limits
+# Verification · 2026-11-04
 
-Local checks executed 2026-11-03 on feature branch `feat/meter-monitoring`.
-
-| Check | Result and scope |
+| Check | Executed result |
 |---|---|
-| Unit/HTTP contract tests | **45 passed**: schema/numeric/date/size validation; real zero/null/error handling; HTTP auth/errors; per-user provisioning; hash/token minting; rotation/revocation response behaviour; offline/stale timing; Thimphu dates; deterministic demo; CSV escaping, keyset paging beyond 500 rows, 10k cap and quota errors |
-| PostgreSQL 17 integration | **Passed**: migrations apply; owner-isolated tables and latest/chart/CSV RPCs including explicitly guessed other-owner UUIDs; anonymous and browser write denial; credential table denial; token authorization, rotation and revocation; rate limit; gateway+slave separation; atomic duplicate handling; server-clock fallback; chart null buckets; CSV range/cursor bounds; 5,000 + 100 row retention batches, recent rows retained |
-| Edge runtime type checks | **Both entrypoints passed Deno check**, using their own lockfile and dependency context. HTTP handler tests use an injected backend adapter; SQL tests use a real disposable PostgreSQL database. Hosted Supabase gateway/JWT behaviour is not claimed from those tests. |
-| Frontend TypeScript + production build | **Passed**. Browser/SDK/chart chunks split; no external font/CDN needed. |
-| Browser functional checks | **2 passed** in real Chromium: desktop demo rendering, chart range changes, multi-meter/gateway selection, actual CSV download/content, disabled demo provisioning, setup modal keyboard close; phone width/no horizontal overflow and missing-config login state |
-| Pages base path | **Passed** built-asset checks for `/Meter_Reading_Dashboard/`; no root-relative `/assets/` references. Real hosted deployment is unverified. |
-| Credential scans | **Passed** current source patterns and built assets. No gateway token/admin key is bundled. The inherited ThingSpeak commit contained hardcoded connection credentials; current feature source uses ignored local config. **Old history still contains those values and they must be rotated.** Scans are targeted checks, not proof no conceivable secret exists. |
-| Production dependency audit | **0 vulnerabilities reported** by `npm audit --omit=dev` at verification time |
-| Firmware compilation | **Not completed locally**: official Arduino CLI 1.3.1 downloaded and checksum verified; board/library indexes denied by network policy. Firmware compile is added to CI using exact pinned packages and example config, but no CI run is claimed. Exact ESP32 3.3.0 HTTPS timeout implementation inspected. |
-| Physical hardware | **Not run**. Owner's previous auxiliary-power zero responses are the only reported hardware validation. No claim of nonzero mapping/scaling/word-order calibration, Wi-Fi/TLS success, or timing under real bus faults. |
-| Supabase hosted deployment | **Blocked/unverified**. Target `qivwjkqkeipaivztgbyy` supplied by owner. Repository linkage does not provide a management token. The session has no usable Supabase binding. Functions, migrations, Auth redirects and Cron have not been applied/verified remotely. |
-| GitHub API / Pages | **Blocked/unverified**: live proxy denied `api.github.com`; Git read works. No Pages URL has been verified. Workflow is supplied, not claimed as executed. |
+| Unit and HTTP contract tests | **45 passed**: payload/schema/numeric/date/size validation, real zero/null/error semantics, provisioning authentication, token lifecycle responses, stale/offline states, timezone conversion, deterministic demo, CSV escaping/pagination/10k cap and quota errors |
+| PostgreSQL 17 integration | **Passed** on initial implementation: migration application, RLS/grants, cross-owner explicit-UUID latest/chart/CSV access denial, browser/anonymous write denial, token authorization/rotation/revocation, deduplication, multi-gateway/meter separation, chart null buckets, CSV limits and 5,000+100 row retention batches |
+| Hosted Supabase migration | **Applied** to verified empty project `qivwjkqkeipaivztgbyy`, with migration tracking and all five app tables using RLS |
+| Hosted Edge Functions | **ACTIVE**, version 1, both functions. `verify_jwt=false` with explicit user/device verification inside each function |
+| Hosted end-to-end requests | **Passed** using two temporary users: Auth password login, register gateway/two meters, HTTPS ingestion and DB persistence, real zero versus failed null/error, server-clock fallback, cross-owner reads, direct-write/hash-table denial, invalid token/schema, 429 rate limiting, duplicate retry, rotation and old-token denial, second-slave upload, revocation, chart null buckets/aggregation, CSV query, cross-user latest RPC |
+| Hosted fixture cleanup | **Verified**: temporary Auth accounts removed; counts of app gateways/readings and Auth users returned to zero. No demo series or actual owner credentials inserted |
+| Hosted retention | **Active** every ten minutes, 30-day setting, max 5,000 deletes/run; at least one successful scheduled run observed |
+| Edge runtime type checking | **Both entrypoints passed Deno check**, isolated function dependency context/lockfile |
+| Frontend production build | **Passed** against the configured live project, both original path and alternate path build support. Static artifact includes only public browser configuration |
+| Built assets and source credential scans | **Passed** targeted patterns for administrative/device tokens, private keys and accidental Wi-Fi credentials. Original historical credentials remain in old commits and must be rotated; scans do not claim old history is clean |
+| Browser checks | **2 passed** in Chromium: desktop charts/time range/multi-meter selection/CSV download/setup, phone width and unconfigured-login state. Browser fixture server explicitly omits live configuration to keep local demo tests deterministic |
+| Firmware | **Compiled** with Arduino CLI 1.3.1, esp32 3.3.0, ModbusMaster 2.0.1, ArduinoJson 7.4.2. Flash 1,070,727B (81%); globals 47,388B (14%). Upstream library/core warnings reported, including an unused ModbusMaster requestFrom path; actual sketch uses readHoldingRegisters |
+| Firmware TLS | Public roots included with source/fingerprints in firmware-trust.md; hostname/chain/date verification remains enabled; SNTP is required. No insecure fallback |
+| Physical ESP32/meter | **Not tested here**. Owner's supplied ThingSpeak sketch matches pins/UART/registers/decoder. Nonzero mapping, scaling and word order still require comparison against the physical display |
+| GitHub public visibility | **Verified** with anonymous public API after owner's change. Connected account's earlier private metadata was stale |
+| GitHub Pages | Static-only publishing branch/workflow prepared for the original URL. Live deployment status must be checked before claiming a working dashboard link. Account connection lacks direct Pages/Actions-variables/repository-creation permissions (403); Git writes and workflow listing work |
 
-The PostgreSQL suite creates an unexposed, network-isolated container with a minimal test-only `auth.uid()`/role model, exercises real PostgreSQL RLS/grants/functions and rolls back fixtures. It does not replace testing real Supabase Auth sessions, PostgREST defaults, project policies or Edge infrastructure. Initial migration and readiness-test issues were corrected; final successful checks are recorded above rather than treating earlier failures as passes.
+No automatic main merge, remote DB reset, paid upgrade, secret logging or certificate-verification bypass was performed. Source branch and static publishing branch remain separate.
 
-## Required hosted follow-up
-
-1. Apply reviewed network settings and securely configure the saved `SUPABASE_ACCESS_TOKEN` requirement; configure the public frontend key. See [target deployment settings](deployment.md).
-2. On the intended project, apply migrations; deploy functions; create two test users; verify login and direct cross-user PostgREST/RPC queries return no other-owner records. Verify public database writes are denied.
-3. Register one gateway per owner and multiple slaves. Upload valid zero and partial readings; verify exact null/error preservation, timestamp fallback, retry duplication, wrong-gateway/slave rejection, invalid credentials, rotation and revocation. Wait ≥10s between accepted batches or expect 429.
-4. Activate Cron intentionally, inspect scheduled job outcome and retention setting, and check database/egress/invocation quotas.
-5. Run GitHub Actions including firmware compilation, publish Pages, and verify the reported HTTPS deployment URL, reload path, live Auth and actual queries. No automatic main merge is configured.
-6. Configure CA trust and flash the ESP32. Test Wi-Fi/backend loss, queue overflow and reset loss; verify Serial output, certificate validation, clock sync, retry IDs, and nonzero values against the meter display. Register a second slave and verify both before relying on the installation.
-
-No paid plan, existing remote database change, public database write policy or credential-verification bypass was introduced.
+See [deployment.md](deployment.md) and [first-reading.md](first-reading.md) for exact configuration and hardware steps. The owner must create their own application login and register their actual gateway; passwords and device tokens are not sent in chat.

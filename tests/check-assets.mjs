@@ -1,9 +1,10 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import assert from "node:assert/strict";
 const html = readFileSync("dist/index.html", "utf8");
-assert.match(
-  html,
-  /\/Meter_Reading_Dashboard\/assets\//,
+assert(
+  html.includes(
+    (process.env.PAGES_BASE_PATH || "/Meter_Reading_Dashboard/") + "assets/",
+  ),
   "project URL base path",
 );
 assert.doesNotMatch(

@@ -12,6 +12,7 @@ export default defineConfig({
   },
   webServer: {
     command: "npm run dev -- --port 5173",
+    env: { VITE_SUPABASE_URL: "", VITE_SUPABASE_PUBLISHABLE_KEY: "" },
     url: "http://127.0.0.1:5173/Meter_Reading_Dashboard/",
     reuseExistingServer: !process.env.CI,
   },

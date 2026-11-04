@@ -13,7 +13,8 @@
     "test:edge": "deno check --config supabase/functions/deno.json supabase/functions/ingest/index.ts supabase/functions/provision/index.ts",
     "check:assets": "node tests/check-assets.mjs",
     "check:source": "node tests/check-source.mjs",
-    "format": "prettier --write src supabase/functions tests/*.ts tests/*.mjs *.ts *.json .github/workflows"
+    "format": "prettier --write src supabase/functions tests/*.ts tests/*.mjs *.ts *.json .github/workflows",
+    "build:site": "node scripts/build-public-site.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.80.0",

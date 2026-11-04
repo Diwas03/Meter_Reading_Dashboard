@@ -1067,8 +1067,8 @@ function Setup({
             <p>
               Copy <code>firmware/meter_gateway/config.example.h</code> to
               ignored <code>config.h</code>. Enter Wi-Fi, gateway UUID, upload
-              token, Supabase HTTPS endpoint, and its verified CA root. Flash
-              the supplied sketch. Logs use 115200 baud.
+              token, Supabase HTTPS endpoint, and keep the bundled TLS trust
+              roots enabled. Flash the supplied sketch. Logs use 115200 baud.
             </p>
           </li>
           <li>

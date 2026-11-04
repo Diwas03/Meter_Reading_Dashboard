@@ -27,6 +27,12 @@ jobs:
       - run: npm run test:browser
         env:
           CHROMIUM_PATH: ""
+      - name: Require live configuration before publication
+        if: github.event_name != 'pull_request'
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: node -e 'if (!process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_PUBLISHABLE_KEY?.startsWith("sb_publishable_")) throw new Error("Set the two public VITE_SUPABASE Actions variables before publishing")'
       - run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
@@ -60,5 +66,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/deploy-pages@v4
         id: deployment
