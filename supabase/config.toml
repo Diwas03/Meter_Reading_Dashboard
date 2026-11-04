@@ -1,0 +1,18 @@
+project_id = "meter-monitoring"
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+max_rows = 1000
+[db]
+port = 54322
+major_version = 17
+[auth]
+enabled = true
+site_url = "http://localhost:5173/Meter_Reading_Dashboard/"
+additional_redirect_urls = ["http://localhost:5173/Meter_Reading_Dashboard/"]
+[functions.ingest]
+verify_jwt = false
+[functions.provision]
+# getUser validates the caller explicitly, including projects using new signing keys.
+verify_jwt = false
