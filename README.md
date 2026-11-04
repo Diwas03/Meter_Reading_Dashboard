@@ -4,6 +4,6 @@ Public static dashboard build. Contains only the browser application, public Sup
 
 Set repository Settings → Pages → Source to GitHub Actions. Enable Pages in repository settings before running the workflow. Run the workflow and verify its reported deployment URL.
 
-The dashboard starts in clearly labelled local demo mode. Choose “Connect your meters” and sign in to view private telemetry. Create the dashboard user in the intended Supabase project's Authentication → Users screen before signing in.
+The dashboard opens directly to sign-in and displays only authenticated ESP32 readings, with Asia/Thimphu dates/times by default. No demo mode or sample generators are shipped. Create the dashboard user in the intended Supabase project's Authentication → Users screen before signing in.
 
-To update, rebuild from the private source with npm run build:site and commit the fresh static output into this repository. Keep the private repository private.
+To update, rebuild from the source checkout with npm run build:site and commit the fresh static output into this repository. Keep real credentials out of Git.

@@ -19,6 +19,8 @@ for attempt in range(12):
             if asset.endswith('.js'):javascript.append(text)
         assert any('qivwjkqkeipaivztgbyy.supabase.co' in text for text in javascript), 'live project config missing'
         assert any('sb_publishable_' in text for text in javascript), 'publishable frontend config missing'
+        for marker in ['demo-gateway','demo-meter','Explore demo','Deterministic sample data','2026-11-03T06:00:00Z']:
+            assert all(marker not in text for text in javascript), 'demo content present in published app'
         metadata=json.loads(get(urljoin(url,'build-info.json')))
         assert metadata['base_path'] in url, 'wrong project base path'
         if Path('build-info.json').exists():
