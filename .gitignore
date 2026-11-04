@@ -12,3 +12,4 @@ playwright-report/
 *.tsbuildinfo
 legacy_thingspeak_config.h
 .public-site/
+firmware/meter_gateway_single_local/

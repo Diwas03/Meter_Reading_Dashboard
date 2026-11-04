@@ -91,6 +91,8 @@ Real zero stays zero. Unspecified, failed or null measurements become SQL NULL w
 
 ## ESP32 firmware
 
+Prefer one file? Use [`firmware/meter_gateway_single/meter_gateway_single.ino`](firmware/meter_gateway_single/meter_gateway_single.ino): settings and trusted certificates are embedded. See its [setup instructions](firmware/meter_gateway_single/README.md). Save a private copy before entering real credentials.
+
 Files: `firmware/meter_gateway/meter_gateway.ino` and `config.example.h`. Copy the latter to ignored `config.h` in the same directory. Keep real credentials there, outside Git.
 
 Exact required packages:
