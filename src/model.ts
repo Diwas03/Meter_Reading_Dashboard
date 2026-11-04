@@ -18,6 +18,22 @@ export type Reading = Values & {
   errors: Partial<Record<Field, string>>;
 };
 export type ChartRow = Values & { meter_id: string; time: string };
+// Sparse series need markers: a single valid sample cannot form a line.
+export function prepareChartData(history: ChartRow[]) {
+  const rows = new Map<string, Record<string, string | number | null>>();
+  const counts: Record<string, number> = {};
+  for (const reading of history) {
+    const row = rows.get(reading.time) ?? { time: reading.time };
+    for (const field of fields) {
+      const key = reading.meter_id + "_" + field;
+      row[key] = reading[field];
+      if (reading[field] !== null && Number.isFinite(reading[field]))
+        counts[key] = (counts[key] ?? 0) + 1;
+    }
+    rows.set(reading.time, row);
+  }
+  return { points: [...rows.values()], counts };
+}
 export const groups: {
   title: string;
   unit: string;

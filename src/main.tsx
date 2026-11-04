@@ -31,12 +31,12 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase, configured, charts, exportRows } from "./api";
 import {
   chooseBucket,
+  prepareChartData,
   demoCharts,
   demoDevices,
   demoMeters,
   demoNow,
   demoReading,
-  fields,
   groups,
   health,
   rangeDates,
@@ -61,7 +61,7 @@ function App() {
     [meters, setMeters] = useState<Meter[]>(demoMeters),
     [device, setDevice] = useState("demo-gateway"),
     [meter, setMeter] = useState("demo-meter-1");
-  const [range, setRange] = useState("24h"),
+  const [range, setRange] = useState("1h"),
     [from, setFrom] = useState("2026-11-02T12:00"),
     [to, setTo] = useState("2026-11-03T12:00"),
     [zone, setZone] = useState("Asia/Thimphu"),
@@ -225,15 +225,10 @@ function App() {
             second: "2-digit",
           }),
     }).format(new Date(time));
-  const chartData = useMemo(() => {
-    const map = new Map<string, Record<string, string | number | null>>();
-    history.forEach((r) => {
-      const row = map.get(r.time) ?? { time: r.time };
-      fields.forEach((f) => (row[r.meter_id + "_" + f] = r[f]));
-      map.set(r.time, row);
-    });
-    return [...map.values()];
-  }, [history]);
+  const { points: chartData, counts: seriesCounts } = useMemo(
+    () => prepareChartData(history),
+    [history],
+  );
   async function login(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase) return;
@@ -721,7 +716,11 @@ function App() {
                       )}
                     </div>
                     <div className="chart-body">
-                      {chartData.length ? (
+                      {selected.some((m) =>
+                        g.keys.some(
+                          (k) => (seriesCounts[m.id + "_" + k] ?? 0) > 0,
+                        ),
+                      ) ? (
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart
                             data={chartData}
@@ -751,7 +750,9 @@ function App() {
                               axisLine={false}
                               tickLine={false}
                               tickFormatter={(n) =>
-                                Number(n).toFixed(g.unit === "PF" ? 2 : 1)
+                                Number(n).toFixed(
+                                  g.unit === "PF" || g.unit === "Hz" ? 2 : 1,
+                                )
                               }
                             />
                             <Tooltip
@@ -776,7 +777,11 @@ function App() {
                                   type="linear"
                                   stroke={colors[i]}
                                   strokeWidth={1.7}
-                                  dot={false}
+                                  dot={
+                                    (seriesCounts[m.id + "_" + k] ?? 0) <= 12
+                                      ? { r: 3, strokeWidth: 0 }
+                                      : false
+                                  }
                                   connectNulls={false}
                                   strokeDasharray={mi ? "5 3" : undefined}
                                   isAnimationActive={false}
@@ -789,7 +794,7 @@ function App() {
                         <div className="chart-empty">
                           {loading
                             ? "Loading history…"
-                            : "No readings in this range"}
+                            : "No valid measurements in this range"}
                         </div>
                       )}
                     </div>

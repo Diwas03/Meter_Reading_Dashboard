@@ -56,3 +56,26 @@ test("phone layout and unconfigured auth state", async ({ page }) => {
   ).toBeVisible();
   await page.screenshot({ path: "/tmp/meter-phone.png", fullPage: true });
 });
+
+test("single-sample history renders visible dots, including measured zero", async ({
+  page,
+}) => {
+  await page.goto("./");
+  await expect(
+    page.getByRole("button", { name: "1 hour", exact: true }),
+  ).toHaveClass("selected");
+  await page.getByRole("button", { name: "Custom", exact: true }).click();
+  await page
+    .locator('input[type="datetime-local"]')
+    .nth(0)
+    .fill("2026-11-03T11:59");
+  await page
+    .locator('input[type="datetime-local"]')
+    .nth(1)
+    .fill("2026-11-03T11:59:30");
+  const frequency = page.locator(".chart-panel").nth(3);
+  await expect(frequency.locator(".recharts-line-dot")).toHaveCount(1);
+  await expect(frequency.locator(".recharts-line-dot")).toBeVisible();
+  const currents = page.locator(".chart-panel").nth(2);
+  await expect(currents.locator(".recharts-line-dot")).toHaveCount(4);
+});

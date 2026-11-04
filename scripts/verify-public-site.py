@@ -1,5 +1,6 @@
 """Read-only HTTPS smoke check for this dashboard's actual Pages release."""
 import json, re, sys, time, urllib.request
+from pathlib import Path
 from urllib.parse import urljoin
 url=sys.argv[1].rstrip('/')+'/'
 for attempt in range(12):
@@ -20,6 +21,9 @@ for attempt in range(12):
         assert any('sb_publishable_' in text for text in javascript), 'publishable frontend config missing'
         metadata=json.loads(get(urljoin(url,'build-info.json')))
         assert metadata['base_path'] in url, 'wrong project base path'
+        if Path('build-info.json').exists():
+            expected=json.loads(Path('build-info.json').read_text())
+            assert metadata['source_commit']==expected['source_commit'], 'previous deployment still cached'
         print('PASS: published HTTPS dashboard, all referenced assets, live Supabase public configuration and build metadata')
         print('Verified URL:',url)
         print('Source commit:',metadata['source_commit'])

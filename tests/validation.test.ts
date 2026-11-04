@@ -198,3 +198,22 @@ describe("dashboard data semantics", () => {
     expect(fields.every((f) => csv.includes(f))).toBe(true);
   });
 });
+
+// The first live upload may be the only non-null point in a long date range.
+it("counts isolated zeros as real chart points while preserving missing buckets", async () => {
+  const { prepareChartData, demoReading, demoMeters, demoNow } = await import(
+    "../src/model"
+  );
+  const sample = demoReading(demoMeters[0], demoNow);
+  sample.frequency = 0;
+  const missing = {
+    ...sample,
+    time: new Date(demoNow - 60000).toISOString(),
+    frequency: null,
+  };
+  const actual = { ...sample, time: new Date(demoNow).toISOString() };
+  const result = prepareChartData([missing, actual]);
+  expect(result.counts[sample.meter_id + "_frequency"]).toBe(1);
+  expect(result.points[0][sample.meter_id + "_frequency"]).toBeNull();
+  expect(result.points[1][sample.meter_id + "_frequency"]).toBe(0);
+});
